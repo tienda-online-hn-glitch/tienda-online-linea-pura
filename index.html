@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LÍNEA PURA - Catálogo de Perfumes Exclusivos</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -43,7 +41,6 @@
 
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-    <!-- HEADER -->
     <header class="sticky top-0 z-40 bg-darkBg/95 backdrop-blur-md border-b border-gold/20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <div class="flex items-center space-x-3 cursor-pointer group" onclick="handleLogoClick()">
@@ -70,7 +67,7 @@
                     <span id="cart-badge" class="absolute -top-1 -right-1 bg-gold text-black font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center scale-0 transition-transform duration-300">0</span>
                 </button>
                 <div id="admin-indicator" class="hidden items-center space-x-2">
-                    <span class="text-xs text-gold font-semibold hidden sm:inline">Admin Activo</span>
+                    <span class="text-xs text-gold font-semibold hidden sm:inline">Admin Nube Activo</span>
                     <button onclick="logoutAdmin()" class="px-3 py-1.5 rounded-full border border-gold/40 text-xs text-gold hover:bg-gold hover:text-black transition" title="Salir de Admin">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
@@ -87,7 +84,6 @@
         </div>
     </header>
 
-    <!-- HERO BANNER -->
     <section class="relative bg-gradient-to-b from-darkBg via-[#121212] to-darkBg py-10 sm:py-14 border-b border-gold/10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <span class="text-xs uppercase tracking-[0.3em] text-gold font-semibold mb-2 block">Catálogo Oficial de Fragancias</span>
@@ -105,12 +101,11 @@
         </div>
     </section>
 
-    <!-- MAIN PRODUCT GRID -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div id="admin-bar" class="hidden mb-8 p-4 bg-cardBg border border-gold/40 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-lg">
             <div class="flex items-center space-x-3">
                 <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="font-cinzel font-semibold text-gold text-sm sm:text-base">Panel de Administración Activo</span>
+                <span class="font-cinzel font-semibold text-gold text-sm sm:text-base">Panel Admin Sincronizado en la Nube</span>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <button onclick="openProductModal()" class="px-4 py-2 gold-bg text-black font-semibold rounded-lg text-sm transition hover:opacity-90 flex items-center space-x-2">
@@ -119,8 +114,8 @@
                 <button onclick="openWhatsAppConfigModal()" class="px-4 py-2 bg-inputBg border border-gold/40 text-gold hover:bg-gold/10 rounded-lg text-sm transition flex items-center space-x-2">
                     <i class="fa-brands fa-whatsapp"></i><span>Configurar WhatsApp</span>
                 </button>
-                <button onclick="downloadJSONBackup()" class="px-4 py-2 bg-inputBg border border-gold text-gold hover:bg-gold/20 rounded-lg text-sm transition flex items-center space-x-2" title="Descarga los cambios para subirlos a GitHub">
-                    <i class="fa-solid fa-download"></i><span>Descargar cambios.json</span>
+                <button onclick="loadFromSupabase()" class="px-4 py-2 bg-inputBg border border-gold text-gold hover:bg-gold/20 rounded-lg text-sm transition flex items-center space-x-2">
+                    <i class="fa-solid fa-rotate"></i><span>Actualizar Catálogo</span>
                 </button>
                 <button onclick="logoutAdmin()" class="px-4 py-2 bg-inputBg border border-gold/30 text-gray-300 hover:text-white rounded-lg text-sm transition">
                     <i class="fa-solid fa-right-from-bracket"></i> Salir
@@ -137,7 +132,6 @@
         </div>
     </main>
 
-    <!-- FOOTER -->
     <footer class="bg-cardBg border-t border-gold/20 py-8 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
             <div>
@@ -148,7 +142,6 @@
         </div>
     </footer>
 
-    <!-- CART DRAWER -->
     <div id="cart-drawer" class="fixed inset-0 z-50 overflow-hidden pointer-events-none">
         <div id="cart-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300 pointer-events-none" onclick="toggleCart()"></div>
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
@@ -174,7 +167,6 @@
         </div>
     </div>
 
-    <!-- PASSWORD MODAL -->
     <div id="password-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
         <div class="bg-cardBg border border-gold/40 rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl relative">
             <button onclick="closePasswordModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
@@ -189,7 +181,6 @@
         </div>
     </div>
 
-    <!-- ADD/EDIT PRODUCT MODAL -->
     <div id="product-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden overflow-y-auto">
         <div class="bg-cardBg border border-gold/40 rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative my-8">
             <button onclick="closeProductModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
@@ -230,12 +221,11 @@
                     <input type="file" id="prod-img-file" accept="image/*" onchange="previewLocalImage(event)" class="w-full text-xs text-gray-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:bg-gold file:text-black">
                     <input type="hidden" id="prod-img-base64">
                 </div>
-                <button type="submit" class="w-full py-3 gold-bg text-black font-semibold rounded-xl text-sm mt-4">Guardar Perfume</button>
+                <button type="submit" class="w-full py-3 gold-bg text-black font-semibold rounded-xl text-sm mt-4">Guardar en la Nube</button>
             </form>
         </div>
     </div>
 
-    <!-- QUICK STATUS MODAL -->
     <div id="quick-status-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
         <div class="bg-cardBg border border-gold/40 rounded-2xl p-6 max-w-xs w-full shadow-2xl relative text-center">
             <button onclick="closeQuickStatusModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
@@ -254,11 +244,10 @@
                     <option value="proximamente">Próximamente</option>
                 </select>
             </div>
-            <button onclick="saveQuickStatus()" class="w-full py-2.5 gold-bg text-black font-semibold rounded-xl text-sm">Actualizar</button>
+            <button onclick="saveQuickStatus()" class="w-full py-2.5 gold-bg text-black font-semibold rounded-xl text-sm">Actualizar en la Nube</button>
         </div>
     </div>
 
-    <!-- WHATSAPP CONFIG MODAL -->
     <div id="whatsapp-config-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
         <div class="bg-cardBg border border-gold/40 rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl relative text-center">
             <button onclick="closeWhatsAppConfigModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
@@ -268,8 +257,14 @@
         </div>
     </div>
 
-    <!-- SCRIPT -->
     <script>
+        // CREDENCIALES DE SUPABASE CONFIGURADAS
+        const SUPABASE_URL = "https://wmeuxrewvannqtlkatxo.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_I9YcWNSitzE-AdB8rzq_7g_kDU1fyiw";
+        
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
         const defaultPerfumes = [
             { id: "p1", name: "Alexandria II", brand: "Xerjoff", volume: "100 ml / 3.4 fl oz", price: 2450.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Xerjoff+Alexandria+II" },
             { id: "p2", name: "Ombré Leather", brand: "Tom Ford", volume: "100 ml / 3.4 fl oz", price: 1890.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Tom+Ford+Ombre+Leather" },
@@ -280,22 +275,7 @@
             { id: "p7", name: "Eros Flame", brand: "Versace", volume: "100 ml / 3.4 fl oz", price: 1350.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Versace+Eros+Flame" },
             { id: "p8", name: "Hawas For Him", brand: "Rasasi", volume: "100 ml EDP", price: 920.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Rasasi+Hawas" },
             { id: "p9", name: "Libre Intense", brand: "YSL", volume: "90 ml Eau de Parfum", price: 1950.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=YSL+Libre+Intense" },
-            { id: "p10", name: "Asad", brand: "Lattafa", volume: "100 ml EDP", price: 750.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Lattafa+Asad" },
-            { id: "p11", name: "Valentino Born in Roma Coral Fantasy", brand: "Valentino", volume: "100 ml / 3.4 fl oz", price: 1780.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Valentino+Coral+Fantasy" },
-            { id: "p12", name: "Red Tobacco", brand: "Mancera", volume: "120 ml / 4.0 fl oz", price: 1620.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Mancera+Red+Tobacco" },
-            { id: "p13", name: "Stronger With You Intensely", brand: "Armani", volume: "100 ml / 3.4 fl oz", price: 1750.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Armani+Stronger+With+You" },
-            { id: "p14", name: "The Most Wanted Parfum", brand: "Azzaro", volume: "100 ml / 3.4 fl oz", price: 1580.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Azzaro+Most+Wanted" },
-            { id: "p15", name: "Light Blue Intense", brand: "Dolce & Gabbana", volume: "100 ml / 3.4 fl oz", price: 1420.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=DG+Light+Blue" },
-            { id: "p16", name: "Side Effect", brand: "Initio", volume: "90 ml / 3.0 fl oz", price: 2650.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Initio+Side+Effect" },
-            { id: "p17", name: "Phantom Parfum", brand: "Rabanne", volume: "100 ml / 3.4 fl oz", price: 1690.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Rabanne+Phantom" },
-            { id: "p18", name: "Aventus", brand: "Creed", volume: "100 ml / 3.4 fl oz", price: 3400.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Creed+Aventus" },
-            { id: "p19", name: "Luna Rossa Black", brand: "Prada", volume: "100 ml / 3.4 fl oz", price: 1600.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Prada+Luna+Rossa" },
-            { id: "p20", name: "CK One", brand: "Calvin Klein", volume: "200 ml / 6.7 fl oz", price: 850.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Calvin+Klein+CK+One" },
-            { id: "p21", name: "Bad Boy Cobalt", brand: "Carolina Herrera", volume: "100 ml / 3.4 fl oz", price: 1720.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Carolina+Herrera+Bad+Boy" },
-            { id: "p22", name: "Boss Bottled Elixir", brand: "Hugo Boss", volume: "100 ml / 3.4 fl oz", price: 1680.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Hugo+Boss+Elixir" },
-            { id: "p23", name: "Amber Oud Gold Edition", brand: "Al Haramain", volume: "120 ml EDP", price: 1100.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Al+Haramain+Amber+Oud" },
-            { id: "p24", name: "Cloud", brand: "Ariana Grande", volume: "100 ml EDP", price: 1050.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Ariana+Grande+Cloud" },
-            { id: "p25", name: "Dance Diamonds", brand: "Shakira", volume: "80 ml EDT", price: 650.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Shakira+Dance" }
+            { id: "p10", name: "Asad", brand: "Lattafa", volume: "100 ml EDP", price: 750.00, status: "disponible", image: "https://placehold.co/400x400/141414/D4AF37?text=Lattafa+Asad" }
         ];
 
         let perfumes = [];
@@ -306,18 +286,11 @@
         let whatsappNumber = '50400000000';
 
         window.onload = function() {
-            loadData();
+            loadCartAndSettings();
+            loadFromSupabase();
         };
 
-        function loadData() {
-            const storedPerfumes = localStorage.getItem('linea_pura_perfumes');
-            if (storedPerfumes) {
-                try { perfumes = JSON.parse(storedPerfumes); } catch (e) { perfumes = defaultPerfumes; }
-            } else {
-                perfumes = defaultPerfumes;
-                saveLocally();
-            }
-
+        function loadCartAndSettings() {
             const storedCart = localStorage.getItem('linea_pura_cart');
             if (storedCart) { try { cart = JSON.parse(storedCart); } catch (e) { cart = []; } }
 
@@ -328,39 +301,47 @@
             if (storedWa) { whatsappNumber = storedWa; }
 
             isAdmin = false;
+        }
+
+        async function loadFromSupabase() {
+            try {
+                let { data, error } = await _supabase.from('perfumes').select('*');
+                if (error || !data || data.length === 0) {
+                    perfumes = defaultPerfumes;
+                    for (let p of perfumes) {
+                        await _supabase.from('perfumes').upsert(p);
+                    }
+                } else {
+                    perfumes = data;
+                }
+            } catch (err) {
+                perfumes = defaultPerfumes;
+            }
             renderBrandFilters();
             renderProducts();
             updateCartUI();
             updateBrandsDatalist();
         }
 
-        function saveLocally() {
-            localStorage.setItem('linea_pura_perfumes', JSON.stringify(perfumes));
-            localStorage.setItem('linea_pura_cart', JSON.stringify(cart));
-            localStorage.setItem('linea_pura_pass', adminPassword);
-            localStorage.setItem('linea_pura_whatsapp', whatsappNumber);
-            localStorage.setItem('linea_pura_is_admin', isAdmin);
+        async function saveToSupabase(product) {
+            showToast('Guardando en la nube...', 'info');
+            const { error } = await _supabase.from('perfumes').upsert(product);
+            if (!error) {
+                showToast('¡Guardado con éxito en la nube!', 'success');
+                loadFromSupabase();
+            } else {
+                showToast('Error al guardar en la nube', 'error');
+            }
         }
 
-        function downloadJSONBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(perfumes, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "productos.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-            showToast('Archivo descargado. Súbelo a GitHub para actualizar a todos.', 'success');
-        }
-
-        function resetToDefaultData() {
-            if (confirm('¿Restaurar catálogo original?')) {
-                perfumes = defaultPerfumes;
-                saveLocally();
-                renderBrandFilters();
-                renderProducts();
-                updateBrandsDatalist();
-                showToast('Catálogo restaurado', 'success');
+        async function deleteFromSupabase(id) {
+            showToast('Eliminando...', 'info');
+            const { error } = await _supabase.from('perfumes').delete().eq('id', id);
+            if (!error) {
+                showToast('Eliminado correctamente', 'success');
+                loadFromSupabase();
+            } else {
+                showToast('Error al eliminar', 'error');
             }
         }
 
@@ -434,7 +415,7 @@
                             <div class="absolute top-3 right-3 z-10 flex space-x-1.5">
                                 <button onclick="openQuickStatusModal('${p.id}')" title="Editar Estado/Precio" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-tag"></i></button>
                                 <button onclick="openEditProductModal('${p.id}')" title="Editar Completo" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
-                                <button onclick="deleteProduct('${p.id}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
+                                <button onclick="deleteFromSupabase('${p.id}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         ` : ''}
                         <div class="relative h-64 overflow-hidden bg-inputBg flex items-center justify-center p-4">
@@ -479,7 +460,6 @@
             event.preventDefault();
             if (document.getElementById('admin-pass-input').value === adminPassword) {
                 isAdmin = true;
-                saveLocally();
                 applyAdminModeUI();
                 closePasswordModal();
                 showToast('¡Panel Admin Activo!', 'success');
@@ -489,7 +469,6 @@
 
         function logoutAdmin() {
             isAdmin = false;
-            saveLocally();
             applyAdminModeUI();
             showToast('Saliste del modo Admin', 'info');
             renderProducts();
@@ -513,7 +492,7 @@
         function saveWhatsAppNumber(event) {
             event.preventDefault();
             whatsappNumber = document.getElementById('whatsapp-num-input').value.trim();
-            saveLocally();
+            localStorage.setItem('linea_pura_whatsapp', whatsappNumber);
             closeWhatsAppConfigModal();
             showToast('WhatsApp guardado', 'success');
         }
@@ -567,31 +546,13 @@
             const status = document.getElementById('prod-status').value;
             let image = document.getElementById('prod-img-base64').value;
 
-            if (!image && !editId) { showToast('Selecciona una imagen', 'error'); return; }
+            const targetId = editId ? editId : 'p_' + Date.now();
             if (!image && editId) { image = perfumes.find(i => i.id === editId).image; }
+            if (!image && !editId) { image = 'https://placehold.co/400x400/141414/D4AF37?text=Perfume'; }
 
-            if (editId) {
-                const idx = perfumes.findIndex(i => i.id === editId);
-                if (idx !== -1) perfumes[idx] = { ...perfumes[idx], name, brand, volume, price, status, image };
-                showToast('Perfume actualizado', 'success');
-            } else {
-                perfumes.unshift({ id: 'p_' + Date.now(), name, brand, volume, price, status, image });
-                showToast('Perfume agregado', 'success');
-            }
-            saveLocally();
-            renderBrandFilters();
-            renderProducts();
+            const productData = { id: targetId, name, brand, volume, price, status, image };
+            saveToSupabase(productData);
             closeProductModal();
-        }
-
-        function deleteProduct(id) {
-            if (confirm('¿Eliminar perfume?')) {
-                perfumes = perfumes.filter(i => i.id !== id);
-                saveLocally();
-                renderBrandFilters();
-                renderProducts();
-                showToast('Eliminado', 'info');
-            }
         }
 
         function openQuickStatusModal(id) {
@@ -615,10 +576,8 @@
             if (p && !isNaN(price)) {
                 p.price = price;
                 p.status = status;
-                saveLocally();
-                renderProducts();
+                saveToSupabase(p);
                 closeQuickStatusModal();
-                showToast('Actualizado con éxito', 'success');
             }
         }
 
@@ -643,7 +602,7 @@
             const existing = cart.find(i => i.id === id);
             if (existing) existing.quantity++;
             else cart.push({ ...product, quantity: 1 });
-            saveLocally();
+            localStorage.setItem('linea_pura_cart', JSON.stringify(cart));
             updateCartUI();
             showToast(`¡Agregado al carrito!`, 'success');
             if (cart.reduce((sum, i) => sum + i.quantity, 1) === 1) toggleCart();
@@ -654,14 +613,14 @@
             if (item) {
                 item.quantity += delta;
                 if (item.quantity <= 0) cart = cart.filter(i => i.id !== id);
-                saveLocally();
+                localStorage.setItem('linea_pura_cart', JSON.stringify(cart));
                 updateCartUI();
             }
         }
 
         function removeFromCart(id) {
             cart = cart.filter(i => i.id !== id);
-            saveLocally();
+            localStorage.setItem('linea_pura_cart', JSON.stringify(cart));
             updateCartUI();
         }
 
