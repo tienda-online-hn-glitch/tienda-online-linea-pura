@@ -249,7 +249,7 @@
 
     <!-- SCRIPT DE SINCRONIZACIÓN EN LA NUBE -->
     <script>
-        const BIN_ID = "6741b65cad19cb3fe7e6c46a"; // Tu Bin ID autogenerado
+        const BIN_ID = "6af94adaffd5d16053c27913"; // Tu Bin ID correcto
         const MASTER_KEY = "$2a$10$rrrJIsnHnHwEpjvuNVeuMerqgJ3WcXa6STRk.yMbuyuiWXHBdM4Su"; // Tu llave maestra
 
         const defaultPerfumes = [
@@ -320,6 +320,7 @@
                         perfumes = data.record.perfumes;
                     } else {
                         perfumes = defaultPerfumes;
+                        syncToCloud(); // Sube los datos por defecto si el bin estaba vacío
                     }
                 } else {
                     perfumes = defaultPerfumes;
