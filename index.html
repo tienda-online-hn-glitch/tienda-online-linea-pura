@@ -268,7 +268,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE SINCRONIZACIÓN EN LA NUBE -->
+    <!-- SCRIPT -->
     <script>
         const BIN_ID = "6af94adaffd5d16053c27913";
         const MASTER_KEY = "$2a$10$rrrJIsnHnHwEpjvuNVeuMerqgJ3WcXa6STRk.yMbuyuiWXHBdM4Su";
@@ -303,7 +303,7 @@
 
         let perfumes = [];
         let cart = [];
-        let isAdmin = false;
+        let isAdmin = false; // Forzado a apagado por defecto
         let currentBrand = 'Todos';
         let adminPassword = 'Lineapura1010';
         let whatsappNumber = '50400000000';
@@ -323,11 +323,9 @@
             const storedWa = localStorage.getItem('linea_pura_whatsapp');
             if (storedWa) { whatsappNumber = storedWa; }
 
-            const storedAdminState = localStorage.getItem('linea_pura_is_admin');
-            if (storedAdminState === 'true') {
-                isAdmin = true;
-                applyAdminModeUI();
-            }
+            // Forzamos que la sesión inicie cerrada para los visitantes
+            isAdmin = false;
+            localStorage.setItem('linea_pura_is_admin', 'false');
         }
 
         async function fetchFromCloud() {
@@ -356,9 +354,8 @@
         }
 
         async function syncToCloud() {
-            showToast('Sincronizando con la nube...', 'info');
             try {
-                const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -367,14 +364,7 @@
                     },
                     body: JSON.stringify({ perfumes: perfumes })
                 });
-                if (response.ok) {
-                    showToast('¡Sincronizado en la nube para todos!', 'success');
-                } else {
-                    showToast('Error al sincronizar', 'error');
-                }
-            } catch (e) {
-                showToast('Error de red al sincronizar', 'error');
-            }
+            } catch (e) {}
         }
 
         function saveLocallyAndCloud() {
