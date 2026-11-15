@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LÍNEA PURA • Catálogo de Perfumes</title>
+  <title>LÍNEA PURA • Catálogo de Perfumes Exclusivos</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome -->
@@ -15,37 +15,316 @@
     .gold-bg { background: linear-gradient(135deg, #D4AF37 0%, #AA8C2C 100%); }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black">
 
   <!-- Header -->
-  <header class="bg-[#111] border-b border-yellow-600/30 sticky top-0 z-40 px-4 py-4 flex justify-between items-center">
-    <div class="flex items-center gap-3 cursor-pointer" onclick="openAdmin()">
-      <div class="w-10 h-10 rounded-full gold-bg flex items-center justify-center text-black font-bold text-lg">
+  <header class="bg-[#111] border-b border-yellow-600/30 sticky top-0 z-40 px-4 py-4 flex justify-between items-center shadow-lg">
+    <div class="flex items-center gap-3 cursor-pointer" onclick="openAdminModal()">
+      <div class="w-11 h-11 rounded-full gold-bg flex items-center justify-center text-black font-bold text-lg shadow-md">
         <i class="fa-solid fa-gem"></i>
       </div>
       <div>
         <h1 class="font-cinzel text-xl font-bold gold-text">LÍNEA PURA</h1>
-        <p class="text-[10px] text-gray-400 uppercase tracking-widest">Perfumería Exclusiva</p>
+        <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Catálogo Exclusivo</p>
       </div>
     </div>
-    <button onclick="toggleCart()" class="relative bg-[#1a1a1a] border border-yellow-600/40 text-yellow-500 p-2.5 rounded-full w-11 h-11 flex items-center justify-center">
-      <i class="fa-solid fa-bag-shopping text-lg"></i>
-      <span id="cartCount" class="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
-    </button>
+
+    <div class="flex items-center gap-3">
+      <input type="text" id="searchInput" placeholder="Buscar perfume..." oninput="filterProducts()" 
+        class="hidden sm:block bg-[#1a1a1a] border border-yellow-600/30 rounded-full px-4 py-1.5 text-xs text-white focus:outline-none focus:border-yellow-500 w-48">
+      
+      <button onclick="toggleCartDrawer()" class="relative bg-[#1a1a1a] border border-yellow-600/40 text-yellow-500 p-2.5 rounded-full w-11 h-11 flex items-center justify-center shadow-md hover:border-yellow-500">
+        <i class="fa-solid fa-bag-shopping text-lg"></i>
+        <span id="cartBadge" class="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center hidden shadow">0</span>
+      </button>
+    </div>
   </header>
 
   <!-- Main Content -->
-  <main class="flex-grow max-w-6xl mx-auto px-4 py-6 w-full">
-    <div class="text-center mb-8 bg-[#141414] border border-yellow-600/20 rounded-2xl p-6">
-      <h2 class="font-cinzel text-2xl font-bold gold-text mb-2">Catálogo de Perfumes</h2>
-      <p class="text-gray-400 text-xs sm:text-sm">Selecciona tus fragancias y realiza tu pedido directo al WhatsApp.</p>
+  <main class="flex-grow max-w-7xl mx-auto px-4 py-8 w-full">
+    <div class="text-center mb-8 bg-[#141414] border border-yellow-600/20 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+      <h2 class="font-cinzel text-2xl sm:text-3xl font-bold gold-text mb-2">Colección de Perfumería</h2>
+      <p class="text-gray-400 text-xs sm:text-sm max-w-xl mx-auto">Selecciona tus fragancias preferidas o arma tu pedido para enviarlo directo a WhatsApp.</p>
     </div>
 
     <!-- Grid de Productos -->
-    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       <!-- Inyectado por JS -->
     </div>
   </main>
 
   <!-- Modal Admin -->
-  <div id="adminModal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center p-4 z-
+  <div id="adminModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-[#141414] border border-yellow-600/40 rounded-2xl max-w-lg w-full p-6 relative shadow-2xl max-h-[90vh] overflow-y-auto">
+      <button onclick="closeAdminModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      
+      <!-- Login -->
+      <div id="adminLoginView">
+        <h3 class="font-cinzel text-lg font-bold text-white mb-2 text-center">Acceso Administrador</h3>
+        <p class="text-xs text-gray-400 text-center mb-4">Ingresa tu contraseña para gestionar precios y productos.</p>
+        <input type="password" id="adminPasswordInput" placeholder="Contraseña" class="w-full bg-[#1e1e1e] border border-yellow-600/30 rounded-xl px-4 py-3 text-sm text-white mb-3 focus:outline-none focus:border-yellow-500 text-center">
+        <button onclick="verifyAdminPassword()" class="w-full gold-bg text-black font-bold py-3 rounded-xl text-sm shadow-md">Ingresar al Panel</button>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="adminDashboardView" class="hidden space-y-5">
+        <div class="flex justify-between items-center border-b border-white/10 pb-3">
+          <h3 class="font-cinzel text-lg font-bold text-yellow-500">Panel de Control</h3>
+          <button onclick="logoutAdmin()" class="text-xs text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-1 rounded-lg">Cerrar Sesión</button>
+        </div>
+
+        <!-- Agregar Producto -->
+        <div class="bg-[#0b0b0b] border border-yellow-600/20 p-4 rounded-xl space-y-3">
+          <h4 class="font-cinzel text-xs font-bold text-yellow-500 uppercase tracking-wider">Agregar Nuevo Perfume</h4>
+          <input type="text" id="newName" placeholder="Nombre del Perfume" class="w-full bg-[#1e1e1e] border border-white/10 rounded-lg px-3 py-2 text-xs text-white">
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" id="newBrand" placeholder="Marca" class="bg-[#1e1e1e] border border-white/10 rounded-lg px-3 py-2 text-xs text-white">
+            <input type="number" id="newPrice" placeholder="Precio (L.)" class="bg-[#1e1e1e] border border-white/10 rounded-lg px-3 py-2 text-xs text-white">
+          </div>
+          <input type="file" id="newImageFile" accept="image/*" class="w-full text-xs text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-yellow-500 file:text-black file:font-bold cursor-pointer">
+          <button onclick="addNewProduct()" class="w-full gold-bg text-black font-bold py-2 rounded-lg text-xs">Guardar Perfume</button>
+        </div>
+
+        <!-- Respaldos -->
+        <div class="bg-[#0b0b0b] border border-yellow-600/20 p-4 rounded-xl space-y-2">
+          <h4 class="font-cinzel text-xs font-bold text-white uppercase tracking-wider">Respaldos</h4>
+          <div class="flex gap-2">
+            <button onclick="exportBackup()" class="flex-1 bg-[#1e1e1e] border border-yellow-600/30 text-yellow-500 py-2 rounded-lg text-xs font-semibold">Descargar Respaldo</button>
+            <label class="flex-1 bg-[#1e1e1e] border border-yellow-600/30 text-yellow-500 py-2 rounded-lg text-xs font-semibold text-center cursor-pointer">
+              Restaurar <input type="file" accept=".json" onchange="importBackup(event)" class="hidden">
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carrito Drawer -->
+  <div id="cartDrawer" class="fixed inset-0 bg-black/70 hidden flex justify-end z-50 backdrop-blur-sm">
+    <div class="bg-[#0B0B0B] border-l border-yellow-600/30 w-full max-w-md h-full flex flex-col p-5 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
+        <h3 class="font-cinzel font-bold text-white text-base">Tu Carrito de Pedido</h3>
+        <button onclick="toggleCartDrawer()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="cartItemsContainer" class="flex-grow overflow-y-auto space-y-3 pr-1"></div>
+      <div class="border-t border-white/10 pt-4 mt-4">
+        <div class="flex justify-between text-white font-bold mb-4 text-base">
+          <span>Total:</span>
+          <span id="cartTotalPrice" class="font-cinzel text-yellow-500">L. 0.00</span>
+        </div>
+        <button onclick="checkoutWhatsApp()" class="w-full gold-bg text-black font-bold py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg">
+          <i class="fa-brands fa-whatsapp text-lg"></i> Enviar Pedido por WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script de Funcionalidad -->
+  <script>
+    const defaultProducts = [
+      { id: 1, name: "Tom Ford Oud Wood", brand: "Tom Ford", volume: "100 ml", price: 0, image: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&auto=format&fit=crop&q=80" },
+      { id: 2, name: "Xerjoff Erba Pura", brand: "Xerjoff", volume: "100 ml", price: 0, image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&auto=format&fit=crop&q=80" },
+      { id: 3, name: "Club de Nuit Intense Man", brand: "Armaf", volume: "105 ml", price: 0, image: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=400&auto=format&fit=crop&q=80" },
+      { id: 4, name: "Yara Lattafa", brand: "Lattafa", volume: "100 ml", price: 0, image: "https://images.unsplash.com/photo-1583445013765-46c20c4a6772?w=400&auto=format&fit=crop&q=80" }
+    ];
+
+    let products = JSON.parse(localStorage.getItem('lp_products')) || defaultProducts;
+    let cart = JSON.parse(localStorage.getItem('lp_cart')) || [];
+    let whatsappNumber = "50499887766"; // Cambia este número por el tuyo de WhatsApp
+    let isAdminLoggedIn = false;
+
+    function renderProducts() {
+      const grid = document.getElementById('productsGrid');
+      const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
+      
+      const filtered = products.filter(p => p.name.toLowerCase().includes(search) || p.brand.toLowerCase().includes(search));
+
+      grid.innerHTML = filtered.map(p => `
+        <div class="bg-[#141414] border border-yellow-600/20 rounded-2xl overflow-hidden flex flex-col shadow-lg">
+          <div class="relative h-48 bg-[#1a1a1a]">
+            <img src="${p.image}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=400&auto=format&fit=crop&q=80'">
+            <span class="absolute top-2 left-2 bg-black/70 text-yellow-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">${p.brand}</span>
+            ${isAdminLoggedIn ? `<button onclick="deleteProduct(${p.id})" class="absolute top-2 right-2 bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </div>
+          <div class="p-4 flex flex-col flex-grow">
+            <h4 class="font-cinzel text-white font-bold text-sm mb-1">${p.name}</h4>
+            <p class="text-gray-400 text-xs mb-3">${p.volume || '100 ml'}</p>
+            <div class="mt-auto flex items-center justify-between pt-3 border-t border-white/5">
+              <span class="font-cinzel text-yellow-500 font-bold text-sm">L. ${p.price > 0 ? p.price.toFixed(2) : '---'}</span>
+              <div class="flex gap-2">
+                ${isAdminLoggedIn ? `<button onclick="editPrice(${p.id})" class="bg-[#1e1e1e] text-yellow-500 border border-yellow-600/30 w-8 h-8 rounded-xl flex items-center justify-center text-xs"><i class="fa-solid fa-pen"></i></button>` : ''}
+                <button onclick="addToCart(${p.id})" class="gold-bg text-black w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm"><i class="fa-solid fa-cart-plus"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterProducts() { renderProducts(); }
+
+    function addToCart(id) {
+      const p = products.find(x => x.id === id);
+      const item = cart.find(x => x.id === id);
+      if (item) item.qty++;
+      else cart.push({ ...p, qty: 1 });
+      saveCart();
+      updateCartBadge();
+    }
+
+    function saveCart() { localStorage.setItem('lp_cart', JSON.stringify(cart)); }
+
+    function updateCartBadge() {
+      const badge = document.getElementById('cartBadge');
+      const total = cart.reduce((sum, i) => sum + i.qty, 0);
+      if (total > 0) { badge.innerText = total; badge.classList.remove('hidden'); }
+      else { badge.classList.add('hidden'); }
+    }
+
+    function toggleCartDrawer() {
+      const drawer = document.getElementById('cartDrawer');
+      drawer.classList.toggle('hidden');
+      if (!drawer.classList.contains('hidden')) renderCartItems();
+    }
+
+    function renderCartItems() {
+      const container = document.getElementById('cartItemsContainer');
+      const totalEl = document.getElementById('cartTotalPrice');
+      if (cart.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 text-sm py-12">Tu carrito está vacío</p>`;
+        totalEl.innerText = "L. 0.00";
+        return;
+      }
+      let total = 0;
+      container.innerHTML = cart.map(i => {
+        total += i.price * i.qty;
+        return `
+          <div class="flex justify-between items-center bg-[#181818] p-3 rounded-xl border border-white/5 text-xs">
+            <div>
+              <p class="text-white font-bold">${i.name}</p>
+              <p class="text-yellow-500">L. ${i.price.toFixed(2)} x ${i.qty}</p>
+            </div>
+            <button onclick="removeFromCart(${i.id})" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `;
+      }).join('');
+      totalEl.innerText = `L. ${total.toFixed(2)}`;
+    }
+
+    function removeFromCart(id) {
+      cart = cart.filter(i => i.id !== id);
+      saveCart();
+      updateCartBadge();
+      renderCartItems();
+    }
+
+    function checkoutWhatsApp() {
+      if (cart.length === 0) return alert("El carrito está vacío");
+      let msg = "Hola LÍNEA PURA ✨, me gustaría realizar el siguiente pedido:\n\n";
+      let total = 0;
+      cart.forEach(i => {
+        msg += `▪️ ${i.name} x${i.qty} - L. ${(i.price * i.qty).toFixed(2)}\n`;
+        total += i.price * i.qty;
+      });
+      msg += `\n*Total a Pagar:* L. ${total.toFixed(2)}`;
+      window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function openAdminModal() {
+      document.getElementById('adminModal').classList.remove('hidden');
+      if (isAdminLoggedIn) {
+        document.getElementById('adminLoginView').classList.add('hidden');
+        document.getElementById('adminDashboardView').classList.remove('hidden');
+      } else {
+        document.getElementById('adminLoginView').classList.remove('hidden');
+        document.getElementById('adminDashboardView').classList.add('hidden');
+        document.getElementById('adminPasswordInput').value = '';
+      }
+    }
+
+    function closeAdminModal() { document.getElementById('adminModal').classList.add('hidden'); }
+
+    function verifyAdminPassword() {
+      if (document.getElementById('adminPasswordInput').value === 'Lineapura1010') {
+        isAdminLoggedIn = true;
+        document.getElementById('adminLoginView').classList.add('hidden');
+        document.getElementById('adminDashboardView').classList.remove('hidden');
+        renderProducts();
+      } else {
+        alert("Contraseña incorrecta");
+      }
+    }
+
+    function logoutAdmin() {
+      isAdminLoggedIn = false;
+      closeAdminModal();
+      renderProducts();
+    }
+
+    function editPrice(id) {
+      const p = products.find(x => x.id === id);
+      const val = prompt(`Nuevo precio para ${p.name} (L.):`, p.price);
+      if (val !== null && !isNaN(val)) {
+        p.price = parseFloat(val);
+        localStorage.setItem('lp_products', JSON.stringify(products));
+        renderProducts();
+      }
+    }
+
+    function deleteProduct(id) {
+      if (confirm("¿Eliminar este perfume?")) {
+        products = products.filter(x => x.id !== id);
+        localStorage.setItem('lp_products', JSON.stringify(products));
+        renderProducts();
+      }
+    }
+
+    function addNewProduct() {
+      const name = document.getElementById('newName').value.trim();
+      const brand = document.getElementById('newBrand').value.trim();
+      const price = parseFloat(document.getElementById('newPrice').value) || 0;
+      const fileInput = document.getElementById('newImageFile');
+
+      if (!name || !brand) return alert("Ingresa nombre y marca");
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          products.unshift({ id: Date.now(), name, brand, volume: "100 ml", price, image: e.target.result });
+          localStorage.setItem('lp_products', JSON.stringify(products));
+          renderProducts();
+          closeAdminModal();
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        products.unshift({ id: Date.now(), name, brand, volume: "100 ml", price, image: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=400&auto=format&fit=crop&q=80" });
+        localStorage.setItem('lp_products', JSON.stringify(products));
+        renderProducts();
+        closeAdminModal();
+      }
+    }
+
+    function exportBackup() {
+      const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(products));
+      const dl = document.createElement('a');
+      dl.setAttribute("href", data);
+      dl.setAttribute("download", "respaldo_lineapura.json");
+      dl.click();
+    }
+
+    function importBackup(e) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        products = JSON.parse(evt.target.result);
+        localStorage.setItem('lp_products', JSON.stringify(products));
+        renderProducts();
+        alert("¡Datos restaurados con éxito!");
+      };
+      reader.readAsText(e.target.files[0]);
+    }
+
+    renderProducts();
+    updateCartBadge();
+  </script>
+</body>
+</html>
