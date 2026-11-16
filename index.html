@@ -110,6 +110,9 @@
                 <button onclick="openProductModal()" class="px-4 py-2 gold-bg text-black font-semibold rounded-lg text-sm transition hover:opacity-90 flex items-center space-x-2">
                     <i class="fa-solid fa-plus"></i><span>Agregar Perfume</span>
                 </button>
+                <button onclick="resetToOriginalCatalog()" class="px-4 py-2 bg-inputBg border border-gold/40 text-gold hover:bg-gold/10 rounded-lg text-sm transition flex items-center space-x-2">
+                    <i class="fa-solid fa-rotate-right"></i><span>Restaurar Catálogo Original</span>
+                </button>
                 <button onclick="openWhatsAppConfigModal()" class="px-4 py-2 bg-inputBg border border-gold/40 text-gold hover:bg-gold/10 rounded-lg text-sm transition flex items-center space-x-2">
                     <i class="fa-brands fa-whatsapp"></i><span>Configurar WhatsApp</span>
                 </button>
@@ -244,7 +247,7 @@
     </div>
 
     <script>
-        // Lista completa recuperada de tus capturas anteriores
+        // Los 39 perfumes reales de tus capturas anteriores
         const defaultPerfumes = [
             { id: "p_1", name: "Hawas Ice EDP", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
             { id: "p_2", name: "Hawas la mar", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
@@ -290,11 +293,9 @@
         let perfumes = [];
         let cart = [];
         let isAdmin = false;
-        let currentBrand = 'Todos';
         let adminPassword = 'Lineapura1010';
         let whatsappNumber = '50400000000';
-        let isLoading = false;
-
+        let currentBrand = 'Todos';
         let currentPage = 1;
         const itemsPerPage = 8;
 
@@ -306,10 +307,8 @@
         function loadCartAndSettings() {
             const storedCart = localStorage.getItem('linea_pura_cart');
             if (storedCart) { try { cart = JSON.parse(storedCart); } catch (e) { cart = []; } }
-
             const storedPass = localStorage.getItem('linea_pura_pass');
             if (storedPass) { adminPassword = storedPass; }
-
             const storedWa = localStorage.getItem('linea_pura_whatsapp');
             if (storedWa) { whatsappNumber = storedWa; }
         }
@@ -337,6 +336,17 @@
             renderBrandFilters();
             renderProducts();
             updateBrandsDatalist();
+        }
+
+        function resetToOriginalCatalog() {
+            if (confirm('¿Deseas restaurar la lista completa original de tus perfumes?')) {
+                perfumes = defaultPerfumes;
+                localStorage.setItem('linea_pura_local_perfumes', JSON.stringify(perfumes));
+                renderBrandFilters();
+                renderProducts();
+                updateBrandsDatalist();
+                showToast('Catálogo restaurado correctamente', 'success');
+            }
         }
 
         function getBrands() {
