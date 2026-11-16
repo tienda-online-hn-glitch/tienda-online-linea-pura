@@ -123,10 +123,8 @@
             </div>
         </div>
 
-        <!-- Contenedor principal donde se renderizan los productos o el indicador de carga -->
         <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
 
-        <!-- Estado vacío (oculto por defecto para evitar parpadeos al cargar) -->
         <div id="empty-state" class="hidden text-center py-20">
             <i class="fa-solid fa-bottle-droplet text-5xl text-gold/30 mb-4"></i>
             <h3 class="font-cinzel text-xl text-gray-300">No se encontraron perfumes</h3>
@@ -304,7 +302,7 @@
         let currentBrand = 'Todos';
         let adminPassword = 'Lineapura1010';
         let whatsappNumber = '50400000000';
-        let isLoading = true; // Control de estado de carga inicial
+        let isLoading = true;
 
         window.onload = function() {
             loadCartAndSettings();
@@ -326,24 +324,26 @@
 
         async function loadFromSupabase() {
             isLoading = true;
-            renderProducts(); // Muestra el indicador de carga inmediatamente
+            renderProducts(); // Muestra el spinner de carga inicial
 
             try {
                 let { data, error } = await _supabase.from('perfumes').select('*');
-                if (error || !data) {
+                if (error) {
+                    console.error("Error al consultar Supabase:", error.message);
                     perfumes = [];
                 } else {
-                    perfumes = data;
+                    perfumes = data || [];
                 }
             } catch (err) {
+                console.error("Error de conexión:", err);
                 perfumes = [];
+            } finally {
+                isLoading = false; // Se desactiva siempre, asegurando que se pinten los productos o el estado vacío correcto
+                renderBrandFilters();
+                renderProducts();
+                updateCartUI();
+                updateBrandsDatalist();
             }
-            
-            isLoading = false; // Finaliza la carga
-            renderBrandFilters();
-            renderProducts();
-            updateCartUI();
-            updateBrandsDatalist();
         }
 
         async function saveToSupabase(product) {
@@ -418,7 +418,7 @@
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
 
-            // 1. Mostrar Spinner mientras carga la información desde la nube
+            // 1. Mostrar Spinner mientras isLoading esté activo
             if (isLoading) {
                 emptyState.classList.add('hidden');
                 grid.innerHTML = `
@@ -440,7 +440,7 @@
                 return matchesBrand && matchesSearch;
             });
 
-            // 2. Si ya terminó de cargar pero no hay productos, mostrar el estado vacío
+            // 2. Si ya terminó de cargar pero no hay coincidencias o productos
             if (filtered.length === 0) {
                 grid.innerHTML = '';
                 emptyState.classList.remove('hidden');
