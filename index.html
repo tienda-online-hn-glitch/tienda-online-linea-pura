@@ -323,16 +323,17 @@
             isAdmin = false;
         }
 
-        async function loadFromSupabase(retries = 3) {
+        async function loadFromSupabase(retries = 2) {
             isLoading = true;
             dbErrorMsg = null;
             renderProducts();
 
             try {
-                // Traemos todos los registros sin límite estricto para mostrar el catálogo completo
+                // Consulta ultra rápida limitada a 30 productos para que cargue instantáneamente
                 let { data, error } = await _supabase
                     .from('perfumes')
-                    .select('*');
+                    .select('id, identificación, nombre, name, marca, brand, volume, price, status, image, imagen, sizes')
+                    .limit(30);
 
                 if (error) {
                     throw new Error(error.message);
@@ -347,7 +348,7 @@
                     setTimeout(() => loadFromSupabase(retries - 1), 1500);
                     return;
                 } else {
-                    dbErrorMsg = "El servidor tardó demasiado en responder. Haz clic en Actualizar Catálogo.";
+                    dbErrorMsg = "El servidor tardó demasiado en responder.";
                     perfumes = [];
                 }
             } finally {
@@ -853,7 +854,7 @@
                     </div>
                 `;
             }).join('');
-            totalPriceEn.innerText = `L. ${total.toFixed(2)}`;
+            totalPriceEl.innerText = `L. ${total.toFixed(2)}`;
         }
 
         function checkoutWhatsApp() {
