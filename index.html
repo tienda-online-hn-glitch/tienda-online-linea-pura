@@ -183,7 +183,7 @@
         </div>
     </div>
 
-    <!-- ADD/EDIT PRODUCT MODAL -->
+    <!-- ADD/EDIT PRODUCT MODAL CON 3 TAMAÑOS, 3 PRECIOS E IMÁGENES POR TAMAÑO -->
     <div id="product-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden overflow-y-auto">
         <div class="bg-cardBg border border-gold/40 rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative my-8">
             <button onclick="closeProductModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
@@ -210,9 +210,11 @@
                     </div>
                 </div>
 
+                <!-- 3 TAMAÑOS, PRECIOS E IMÁGENES OPCIONALES -->
                 <div class="border border-gold/20 p-4 rounded-xl bg-inputBg/50 space-y-4">
                     <span class="text-xs font-cinzel text-gold font-bold uppercase tracking-wider block">Configuración de Tamaños, Precios e Imágenes</span>
                     
+                    <!-- Tamaño 1 -->
                     <div class="p-3 bg-darkBg/60 rounded-xl border border-gold/10 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
                             <div>
@@ -231,6 +233,7 @@
                         </div>
                     </div>
 
+                    <!-- Tamaño 2 -->
                     <div class="p-3 bg-darkBg/60 rounded-xl border border-gold/10 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
                             <div>
@@ -249,6 +252,7 @@
                         </div>
                     </div>
 
+                    <!-- Tamaño 3 -->
                     <div class="p-3 bg-darkBg/60 rounded-xl border border-gold/10 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
                             <div>
@@ -268,6 +272,7 @@
                     </div>
                 </div>
 
+                <!-- Imagen Principal por defecto -->
                 <div>
                     <label class="block text-xs font-medium text-gray-400 mb-1">Fotografía Principal / General *</label>
                     <input type="file" id="prod-img-file" accept="image/*" onchange="previewLocalImage(event)" class="w-full text-xs text-gray-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:bg-gold file:text-black">
@@ -389,6 +394,7 @@
             datalist.innerHTML = brands.map(b => `<option value="${b}">`).join('');
         }
 
+        // Actualiza precio y foto al cambiar de tamaño en la tarjeta
         function updateCardSelection(productId, selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const price = selectedOption.getAttribute('data-price');
@@ -399,6 +405,7 @@
             if (img && img !== 'null' && img !== '') {
                 document.getElementById(`img-display-${productId}`).src = img;
             } else {
+                // Si no tiene foto propia, usa la principal del producto
                 const product = perfumes.find(i => i.id === productId);
                 if (product) {
                     document.getElementById(`img-display-${productId}`).src = product.image;
