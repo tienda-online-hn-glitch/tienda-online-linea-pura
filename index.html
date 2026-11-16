@@ -123,8 +123,10 @@
             </div>
         </div>
 
+        <!-- Contenedor principal donde se renderizan los productos o el indicador de carga -->
         <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
 
+        <!-- Estado vacío (oculto por defecto para evitar parpadeos al cargar) -->
         <div id="empty-state" class="hidden text-center py-20">
             <i class="fa-solid fa-bottle-droplet text-5xl text-gold/30 mb-4"></i>
             <h3 class="font-cinzel text-xl text-gray-300">No se encontraron perfumes</h3>
@@ -183,7 +185,7 @@
         </div>
     </div>
 
-    <!-- ADD/EDIT PRODUCT MODAL CON 3 TAMAÑOS, 3 PRECIOS E IMÁGENES POR TAMAÑO -->
+    <!-- ADD/EDIT PRODUCT MODAL -->
     <div id="product-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden overflow-y-auto">
         <div class="bg-cardBg border border-gold/40 rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative my-8">
             <button onclick="closeProductModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
@@ -210,11 +212,9 @@
                     </div>
                 </div>
 
-                <!-- 3 TAMAÑOS, PRECIOS E IMÁGENES OPCIONALES -->
                 <div class="border border-gold/20 p-4 rounded-xl bg-inputBg/50 space-y-4">
                     <span class="text-xs font-cinzel text-gold font-bold uppercase tracking-wider block">Configuración de Tamaños, Precios e Imágenes</span>
                     
-                    <!-- Tamaño 1 -->
                     <div class="p-3 bg-darkBg/60 rounded-xl border border-gold/10 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
                             <div>
@@ -233,7 +233,6 @@
                         </div>
                     </div>
 
-                    <!-- Tamaño 2 -->
                     <div class="p-3 bg-darkBg/60 rounded-xl border border-gold/10 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
                             <div>
@@ -252,7 +251,6 @@
                         </div>
                     </div>
 
-                    <!-- Tamaño 3 -->
                     <div class="p-3 bg-darkBg/60 rounded-xl border border-gold/10 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
                             <div>
@@ -272,7 +270,6 @@
                     </div>
                 </div>
 
-                <!-- Imagen Principal por defecto -->
                 <div>
                     <label class="block text-xs font-medium text-gray-400 mb-1">Fotografía Principal / General *</label>
                     <input type="file" id="prod-img-file" accept="image/*" onchange="previewLocalImage(event)" class="w-full text-xs text-gray-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:bg-gold file:text-black">
@@ -307,6 +304,7 @@
         let currentBrand = 'Todos';
         let adminPassword = 'Lineapura1010';
         let whatsappNumber = '50400000000';
+        let isLoading = true; // Control de estado de carga inicial
 
         window.onload = function() {
             loadCartAndSettings();
@@ -327,6 +325,9 @@
         }
 
         async function loadFromSupabase() {
+            isLoading = true;
+            renderProducts(); // Muestra el indicador de carga inmediatamente
+
             try {
                 let { data, error } = await _supabase.from('perfumes').select('*');
                 if (error || !data) {
@@ -337,6 +338,8 @@
             } catch (err) {
                 perfumes = [];
             }
+            
+            isLoading = false; // Finaliza la carga
             renderBrandFilters();
             renderProducts();
             updateCartUI();
@@ -394,7 +397,6 @@
             datalist.innerHTML = brands.map(b => `<option value="${b}">`).join('');
         }
 
-        // Actualiza precio y foto al cambiar de tamaño en la tarjeta
         function updateCardSelection(productId, selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const price = selectedOption.getAttribute('data-price');
@@ -405,7 +407,6 @@
             if (img && img !== 'null' && img !== '') {
                 document.getElementById(`img-display-${productId}`).src = img;
             } else {
-                // Si no tiene foto propia, usa la principal del producto
                 const product = perfumes.find(i => i.id === productId);
                 if (product) {
                     document.getElementById(`img-display-${productId}`).src = product.image;
@@ -416,6 +417,19 @@
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
+
+            // 1. Mostrar Spinner mientras carga la información desde la nube
+            if (isLoading) {
+                emptyState.classList.add('hidden');
+                grid.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center py-24 space-y-4">
+                        <div class="w-12 h-12 border-4 border-gold/20 border-t-gold rounded-full animate-spin"></div>
+                        <p class="font-cinzel text-gold text-sm tracking-widest uppercase animate-pulse">Cargando fragancias...</p>
+                    </div>
+                `;
+                return;
+            }
+
             const searchQuery = document.getElementById('search-input').value.toLowerCase() || document.getElementById('search-input-mobile').value.toLowerCase();
 
             let filtered = perfumes.filter(p => {
@@ -426,6 +440,7 @@
                 return matchesBrand && matchesSearch;
             });
 
+            // 2. Si ya terminó de cargar pero no hay productos, mostrar el estado vacío
             if (filtered.length === 0) {
                 grid.innerHTML = '';
                 emptyState.classList.remove('hidden');
