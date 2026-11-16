@@ -1,152 +1,314 @@
 [
   {
     "id": "p_1",
-    "name": "Hawas Ice",
+    "name": "Hawas Ice EDP",
     "brand": "Rasasi",
     "status": "disponible",
     "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Ice",
-    "sizes": [
-      { "name": "100 ml", "price": 1250, "image": "" }
-    ]
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
   },
   {
     "id": "p_2",
-    "name": "Hawas Paradise",
+    "name": "Hawas la mar",
     "brand": "Rasasi",
     "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Paradise",
-    "sizes": [
-      { "name": "100 ml", "price": 1250, "image": "" }
-    ]
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+La+Mar",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
   },
   {
     "id": "p_3",
+    "name": "Hawas para él fuego",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Fuego",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_4",
     "name": "Hawas Malibu",
     "brand": "Rasasi",
     "status": "disponible",
     "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Malibu",
-    "sizes": [
-      { "name": "100 ml", "price": 1250, "image": "" }
-    ]
-  },
-  {
-    "id": "p_4",
-    "name": "Hawas Kobra",
-    "brand": "Rasasi",
-    "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Kobra",
-    "sizes": [
-      { "name": "100 ml", "price": 1250, "image": "" }
-    ]
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
   },
   {
     "id": "p_5",
+    "name": "Hawas Exótico",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Exotico",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_6",
+    "name": "Hawas negro",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Negro",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_7",
+    "name": "Alteza Hawas",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Alteza+Hawas",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_8",
+    "name": "Hawas kobra",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Kobra",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_9",
+    "name": "Elixir de Hawas",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Elixir+Hawas",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_10",
     "name": "Hawas Tropical",
     "brand": "Rasasi",
     "status": "disponible",
     "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Tropical",
-    "sizes": [
-      { "name": "100 ml", "price": 1250, "image": "" }
-    ]
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
   },
   {
-    "id": "p_6",
-    "name": "Hawas Long Lasting",
+    "id": "p_11",
+    "name": "Cromo Hawas para él",
     "brand": "Rasasi",
     "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Long+Lasting",
-    "sizes": [
-      { "name": "100 ml", "price": 1250, "image": "" }
-    ]
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Cromo+Hawas",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
   },
   {
-    "id": "p_7",
-    "name": "Hawas Nautica",
+    "id": "p_12",
+    "name": "Hawas Londres",
     "brand": "Rasasi",
     "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Nautica",
-    "sizes": [
-      { "name": "100 ml", "price": 1250, "image": "" }
-    ]
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Londres",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
   },
   {
-    "id": "p_8",
-    "name": "Hawas Atlantis",
+    "id": "p_13",
+    "name": "Hawas Nautileus",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Nautileus",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_14",
+    "name": "Hawas Atlantis para él",
     "brand": "Rasasi",
     "status": "disponible",
     "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Atlantis",
-    "sizes": [
-      { "name": "100 ml", "price": 1250, "image": "" }
-    ]
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
   },
   {
-    "id": "p_9",
-    "name": "Hawas Vibor",
+    "id": "p_15",
+    "name": "Hawas Víbora para él",
     "brand": "Rasasi",
     "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Vibor",
-    "sizes": [
-      { "name": "100 ml", "price": 1250, "image": "" }
-    ]
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Vibora",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
   },
   {
-    "id": "p_10",
+    "id": "p_16",
+    "name": "Sobredosis de Hawas",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Sobredosis+Hawas",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_17",
+    "name": "Hawas Majestic",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Majestic",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_18",
+    "name": "Cazaforro de Hawas",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Cazaforro+Hawas",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_19",
+    "name": "Hawas para su Diva (M)",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Diva",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_20",
+    "name": "Hawas para Ella (M)",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Ella",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_21",
+    "name": "Hawas Reina (U)",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Reina",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_22",
+    "name": "Hawas Rosa para Ella (M)",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Rosa",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_23",
+    "name": "Hawas Rouge (M)",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Rouge",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_24",
+    "name": "Hawas para su Eclat (M)",
+    "brand": "Rasasi",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Hawas+Eclat",
+    "sizes": [{ "name": "100 ml", "price": 1250, "image": "" }]
+  },
+  {
+    "id": "p_25",
     "name": "Club de Nuit Intense Man",
     "brand": "Armaf",
     "status": "disponible",
     "image": "https://placehold.co/400x400/141414/D4AF37?text=Club+de+Nuit",
-    "sizes": [
-      { "name": "105 ml", "price": 1100, "image": "" }
-    ]
+    "sizes": [{ "name": "105 ml", "price": 1100, "image": "" }]
   },
   {
-    "id": "p_11",
-    "name": "Asad Elixir",
+    "id": "p_26",
+    "name": "Club de Nuit Urban Man Elixir",
+    "brand": "Armaf",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Urban+Man+Elixir",
+    "sizes": [{ "name": "105 ml", "price": 1150, "image": "" }]
+  },
+  {
+    "id": "p_27",
+    "name": "Club de Nuit Azul Icónico",
+    "brand": "Armaf",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Iconic",
+    "sizes": [{ "name": "105 ml", "price": 1150, "image": "" }]
+  },
+  {
+    "id": "p_28",
+    "name": "Club de Nuit Sillage",
+    "brand": "Armaf",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Sillage",
+    "sizes": [{ "name": "105 ml", "price": 1100, "image": "" }]
+  },
+  {
+    "id": "p_29",
+    "name": "Club de Nuit Elite",
+    "brand": "Armaf",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Elite",
+    "sizes": [{ "name": "105 ml", "price": 1200, "image": "" }]
+  },
+  {
+    "id": "p_30",
+    "name": "Club de Nuit Precieux I Extrait",
+    "brand": "Armaf",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Precieux",
+    "sizes": [{ "name": "105 ml", "price": 1300, "image": "" }]
+  },
+  {
+    "id": "p_31",
+    "name": "Odyssey Mandarin Sky EDP",
+    "brand": "Armaf",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Mandarin+Sky",
+    "sizes": [{ "name": "100 ml", "price": 1000, "image": "" }]
+  },
+  {
+    "id": "p_32",
+    "name": "Odyssey Aqua Edition EDP",
+    "brand": "Armaf",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Odyssey+Aqua",
+    "sizes": [{ "name": "100 ml", "price": 1000, "image": "" }]
+  },
+  {
+    "id": "p_33",
+    "name": "Ariana Grande Cloud EDP",
+    "brand": "Ariana Grande",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Cloud",
+    "sizes": [{ "name": "100 ml", "price": 1200, "image": "" }]
+  },
+  {
+    "id": "p_34",
+    "name": "Xerjoff Erba Pura EDP",
+    "brand": "Xerjoff",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Erba+Pura",
+    "sizes": [{ "name": "100 ml", "price": 2500, "image": "" }]
+  },
+  {
+    "id": "p_35",
+    "name": "Alejandria II",
+    "brand": "Xerjoff",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Alejandria+II",
+    "sizes": [{ "name": "100 ml", "price": 2600, "image": "" }]
+  },
+  {
+    "id": "p_36",
+    "name": "Asad",
     "brand": "Lattafa",
     "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Asad+Elixir",
-    "sizes": [
-      { "name": "100 ml", "price": 950, "image": "" }
-    ]
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Asad",
+    "sizes": [{ "name": "100 ml", "price": 950, "image": "" }]
   },
   {
-    "id": "p_12",
-    "name": "Yara Elixir",
+    "id": "p_37",
+    "name": "Piel degradada",
+    "brand": "Tom Ford",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Tom+Ford",
+    "sizes": [{ "name": "100 ml", "price": 1800, "image": "" }]
+  },
+  {
+    "id": "p_38",
+    "name": "El Elixir Masculino",
+    "brand": "Jean Paul Gaultier",
+    "status": "disponible",
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=JPG+Elixir",
+    "sizes": [{ "name": "125 ml", "price": 2100, "image": "" }]
+  },
+  {
+    "id": "p_39",
+    "name": "Yara Original (Rosa)",
     "brand": "Lattafa",
     "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Yara+Elixir",
-    "sizes": [
-      { "name": "100 ml", "price": 900, "image": "" }
-    ]
-  },
-  {
-    "id": "p_13",
-    "name": "Yara Moi",
-    "brand": "Lattafa",
-    "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Yara+Moi",
-    "sizes": [
-      { "name": "100 ml", "price": 900, "image": "" }
-    ]
-  },
-  {
-    "id": "p_14",
-    "name": "Bade'e Al Oud Honor & Glory",
-    "brand": "Lattafa",
-    "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Honor+and+Glory",
-    "sizes": [
-      { "name": "100 ml", "price": 1050, "image": "" }
-    ]
-  },
-  {
-    "id": "p_15",
-    "name": "Vulcan",
-    "brand": "Fragrance World",
-    "status": "disponible",
-    "image": "https://placehold.co/400x400/141414/D4AF37?text=Vulcan",
-    "sizes": [
-      { "name": "100 ml", "price": 950, "image": "" }
-    ]
+    "image": "https://placehold.co/400x400/141414/D4AF37?text=Yara+Rosa",
+    "sizes": [{ "name": "100 ml", "price": 900, "image": "" }]
   }
 ]
