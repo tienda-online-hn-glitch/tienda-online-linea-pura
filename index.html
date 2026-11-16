@@ -294,7 +294,11 @@
         const SUPABASE_KEY = "sb_publishable_I9YcWNSitzE-AdB8rzq_7g_kDU1fyiw";
         
         const { createClient } = supabase;
-        const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+            db: { schema: 'public' },
+            auth: { persistSession: false },
+            global: { headers: { 'x-client-info': 'linea-pura-web' } }
+        });
 
         let perfumes = [];
         let cart = [];
@@ -323,17 +327,24 @@
             isAdmin = false;
         }
 
-        async function loadFromSupabase(retries = 2) {
+        async function loadFromSupabase(retries = 3) {
             isLoading = true;
             dbErrorMsg = null;
             renderProducts();
 
             try {
-                // Consulta ultra rápida limitada a 30 productos para que cargue instantáneamente
+                // Configuramos un AbortController con 20 segundos de margen para evitar timeouts prematuros
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+                // Limitamos a 15 productos iniciales para que la respuesta sea rapidísima
                 let { data, error } = await _supabase
                     .from('perfumes')
                     .select('id, identificación, nombre, name, marca, brand, volume, price, status, image, imagen, sizes')
-                    .limit(30);
+                    .limit(15)
+                    .abortSignal(controller.signal);
+
+                clearTimeout(timeoutId);
 
                 if (error) {
                     throw new Error(error.message);
@@ -345,10 +356,10 @@
                 console.warn(`Intento fallido. Quedan ${retries} reintentos...`, err);
                 
                 if (retries > 0) {
-                    setTimeout(() => loadFromSupabase(retries - 1), 1500);
+                    setTimeout(() => loadFromSupabase(retries - 1), 2000);
                     return;
                 } else {
-                    dbErrorMsg = "El servidor tardó demasiado en responder.";
+                    dbErrorMsg = "El servidor de Supabase tardó demasiado en responder.";
                     perfumes = [];
                 }
             } finally {
