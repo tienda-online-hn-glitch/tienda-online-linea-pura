@@ -303,7 +303,7 @@
         let adminPassword = 'Lineapura1010';
         let whatsappNumber = '50400000000';
         let isLoading = true;
-        let dbErrorMsg = null; // Almacenará el error si ocurre uno con Supabase
+        let dbErrorMsg = null;
 
         window.onload = function() {
             loadCartAndSettings();
@@ -329,7 +329,18 @@
             renderProducts();
 
             try {
-                let { data, error } = await _supabase.from('perfumes').select('*');
+                // Configuramos un timeout de 15 segundos para evitar cortes prematuros
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                let { data, error } = await _supabase
+                    .from('perfumes')
+                    .select('*')
+                    .order('id', { ascending: false })
+                    .abortSignal(controller.signal);
+
+                clearTimeout(timeoutId);
+
                 if (error) {
                     console.error("Error al consultar Supabase:", error);
                     dbErrorMsg = error.message;
@@ -338,8 +349,8 @@
                     perfumes = data || [];
                 }
             } catch (err) {
-                console.error("Error de conexión:", err);
-                dbErrorMsg = err.message || "Error desconocido de red";
+                console.error("Error de conexión o timeout:", err);
+                dbErrorMsg = "El servidor tardó demasiado en responder (Timeout). Intenta de nuevo.";
                 perfumes = [];
             } finally {
                 isLoading = false;
@@ -422,7 +433,6 @@
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
 
-            // 1. Mostrar Spinner mientras carga
             if (isLoading) {
                 emptyState.classList.add('hidden');
                 grid.innerHTML = `
@@ -434,7 +444,6 @@
                 return;
             }
 
-            // Si hubo un error en Supabase, mostrarlo claramente en pantalla para identificarlo
             if (dbErrorMsg) {
                 emptyState.classList.add('hidden');
                 grid.innerHTML = `
@@ -458,7 +467,6 @@
                 return matchesBrand && matchesSearch;
             });
 
-            // 2. Si no hay productos
             if (filtered.length === 0) {
                 grid.innerHTML = '';
                 emptyState.classList.remove('hidden');
