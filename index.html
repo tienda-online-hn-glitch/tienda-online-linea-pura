@@ -329,17 +329,11 @@
             renderProducts();
 
             try {
-                // Configuramos un timeout de 15 segundos para evitar cortes prematuros
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
-
+                // Consulta optimizada y ligera para evitar timeouts en Supabase
                 let { data, error } = await _supabase
                     .from('perfumes')
-                    .select('*')
-                    .order('id', { ascending: false })
-                    .abortSignal(controller.signal);
-
-                clearTimeout(timeoutId);
+                    .select('id, name, brand, volume, price, status, image, sizes')
+                    .limit(50);
 
                 if (error) {
                     console.error("Error al consultar Supabase:", error);
@@ -349,8 +343,8 @@
                     perfumes = data || [];
                 }
             } catch (err) {
-                console.error("Error de conexión o timeout:", err);
-                dbErrorMsg = "El servidor tardó demasiado en responder (Timeout). Intenta de nuevo.";
+                console.error("Error de conexión:", err);
+                dbErrorMsg = "La base de datos tardó demasiado. Verifica tus políticas RLS en Supabase.";
                 perfumes = [];
             } finally {
                 isLoading = false;
