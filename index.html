@@ -323,35 +323,41 @@
             isAdmin = false;
         }
 
-        async function loadFromSupabase() {
+        async function loadFromSupabase(retries = 2) {
             isLoading = true;
             dbErrorMsg = null;
             renderProducts();
 
             try {
-                // Consulta optimizada y ligera para evitar timeouts en Supabase
                 let { data, error } = await _supabase
                     .from('perfumes')
                     .select('id, name, brand, volume, price, status, image, sizes')
                     .limit(50);
 
                 if (error) {
-                    console.error("Error al consultar Supabase:", error);
-                    dbErrorMsg = error.message;
-                    perfumes = [];
-                } else {
-                    perfumes = data || [];
+                    throw new Error(error.message);
                 }
+
+                perfumes = data || [];
+                dbErrorMsg = null;
             } catch (err) {
-                console.error("Error de conexión:", err);
-                dbErrorMsg = "La base de datos tardó demasiado. Verifica tus políticas RLS en Supabase.";
-                perfumes = [];
+                console.warn(`Intento fallido. Quedan ${retries} reintentos...`, err);
+                
+                if (retries > 0) {
+                    setTimeout(() => loadFromSupabase(retries - 1), 1500);
+                    return;
+                } else {
+                    dbErrorMsg = "El servidor tardó demasiado en responder (Timeout). Haz clic en reintentar.";
+                    perfumes = [];
+                }
             } finally {
-                isLoading = false;
-                renderBrandFilters();
-                renderProducts();
-                updateCartUI();
-                updateBrandsDatalist();
+                if (retries === 0 || perfumes.length > 0 || dbErrorMsg) {
+                    isLoading = false;
+                    renderBrandFilters();
+                    renderProducts();
+                    updateCartUI();
+                    updateBrandsDatalist();
+                }
             }
         }
 
@@ -518,7 +524,13 @@
                         </div>
                         <div class="p-5 flex-1 flex flex-col justify-between">
                             <div>
-                                <h4 class="font-cinzel font-bold text-lg text-white mb-1 group-hover:text-gold transition">${p.name}</h4>
+                                <div class="flex items-center justify-between mb-1">
+                                    <h4 class="font-cinzel font-bold text-lg text-white group-hover:text-gold transition">${p.name}</h4>
+                                    <!-- Insignia de 100% Original -->
+                                    <span class="text-[10px] bg-gold/10 text-gold border border-gold/30 px-2 py-0.5 rounded-full font-medium tracking-wide flex items-center gap-1">
+                                        <i class="fa-solid fa-check text-[9px]"></i> 100% Original
+                                    </span>
+                                </div>
                                 <p class="text-xs text-gray-400 mb-3">${sizes.length === 1 ? sizes[0].name : 'Varios tamaños disponibles'}</p>
                             </div>
                             <div>
