@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -66,7 +67,7 @@
                     <span id="cart-badge" class="absolute -top-1 -right-1 bg-gold text-black font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center scale-0 transition-transform duration-300">0</span>
                 </button>
                 <div id="admin-indicator" class="hidden items-center space-x-2">
-                    <span class="text-xs text-gold font-semibold hidden sm:inline">Admin Activo</span>
+                    <span class="text-xs text-gold font-semibold hidden sm:inline">Admin Nube Activo</span>
                     <button onclick="logoutAdmin()" class="px-3 py-1.5 rounded-full border border-gold/40 text-xs text-gold hover:bg-gold hover:text-black transition" title="Salir de Admin">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
@@ -103,18 +104,18 @@
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div id="admin-bar" class="hidden mb-8 p-4 bg-cardBg border border-gold/40 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-lg">
             <div class="flex items-center space-x-3">
-                <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span class="font-cinzel font-semibold text-gold text-sm sm:text-base">Panel de Administración Activo</span>
+                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="font-cinzel font-semibold text-gold text-sm sm:text-base">Panel Admin Sincronizado en la Nube</span>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <button onclick="openProductModal()" class="px-4 py-2 gold-bg text-black font-semibold rounded-lg text-sm transition hover:opacity-90 flex items-center space-x-2">
                     <i class="fa-solid fa-plus"></i><span>Agregar Perfume</span>
                 </button>
-                <button onclick="resetToOriginalCatalog()" class="px-4 py-2 bg-inputBg border border-gold/40 text-gold hover:bg-gold/10 rounded-lg text-sm transition flex items-center space-x-2">
-                    <i class="fa-solid fa-rotate-right"></i><span>Restaurar Catálogo Original</span>
-                </button>
                 <button onclick="openWhatsAppConfigModal()" class="px-4 py-2 bg-inputBg border border-gold/40 text-gold hover:bg-gold/10 rounded-lg text-sm transition flex items-center space-x-2">
                     <i class="fa-brands fa-whatsapp"></i><span>Configurar WhatsApp</span>
+                </button>
+                <button onclick="loadFromSupabase()" class="px-4 py-2 bg-inputBg border border-gold text-gold hover:bg-gold/20 rounded-lg text-sm transition flex items-center space-x-2">
+                    <i class="fa-solid fa-rotate"></i><span>Actualizar Catálogo</span>
                 </button>
                 <button onclick="logoutAdmin()" class="px-4 py-2 bg-inputBg border border-gold/30 text-gray-300 hover:text-white rounded-lg text-sm transition">
                     <i class="fa-solid fa-right-from-bracket"></i> Salir
@@ -124,13 +125,10 @@
 
         <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
 
-        <!-- PAGINACIÓN -->
-        <div id="pagination-container" class="flex items-center justify-center space-x-3 mt-12"></div>
-
         <div id="empty-state" class="hidden text-center py-20">
             <i class="fa-solid fa-bottle-droplet text-5xl text-gold/30 mb-4"></i>
             <h3 class="font-cinzel text-xl text-gray-300">No se encontraron perfumes</h3>
-            <p class="text-gray-500 text-sm mt-1">Prueba seleccionando otra marca o agrega un perfume.</p>
+            <p class="text-gray-500 text-sm mt-1">Prueba seleccionando otra marca o limpiando la búsqueda.</p>
         </div>
     </main>
 
@@ -213,25 +211,70 @@
                 </div>
 
                 <div class="border border-gold/20 p-4 rounded-xl bg-inputBg/50 space-y-4">
-                    <span class="text-xs font-cinzel text-gold font-bold uppercase tracking-wider block">Configuración de Tamaños y Precios</span>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-[11px] text-gray-400 mb-1">Tamaño (Ej. 100 ml)</label>
-                            <input type="text" id="prod-t1-name" placeholder="100 ml" class="w-full bg-inputBg border border-gold/30 rounded-lg px-3 py-2 text-xs text-white">
+                    <span class="text-xs font-cinzel text-gold font-bold uppercase tracking-wider block">Configuración de Tamaños, Precios e Imágenes</span>
+                    
+                    <div class="p-3 bg-darkBg/60 rounded-xl border border-gold/10 space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Tamaño 1 (Ej. 30 ml)</label>
+                                <input type="text" id="prod-t1-name" placeholder="30 ml" class="w-full bg-inputBg border border-gold/30 rounded-lg px-3 py-2 text-xs text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Precio 1 (L.)</label>
+                                <input type="number" step="0.01" id="prod-t1-price" placeholder="450" class="w-full bg-inputBg border border-gold/30 rounded-lg px-3 py-2 text-xs text-white">
+                            </div>
                         </div>
                         <div>
-                            <label class="block text-[11px] text-gray-400 mb-1">Precio (L.)</label>
-                            <input type="number" step="0.01" id="prod-t1-price" placeholder="1250" class="w-full bg-inputBg border border-gold/30 rounded-lg px-3 py-2 text-xs text-white">
+                            <label class="block text-[10px] text-gray-400 mb-1">Foto específica Tamaño 1 (Opcional)</label>
+                            <input type="file" id="prod-t1-file" accept="image/*" onchange="previewSizeImage(event, 1)" class="w-full text-[10px] text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded file:bg-gold file:text-black">
+                            <input type="hidden" id="prod-t1-img">
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-darkBg/60 rounded-xl border border-gold/10 space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Tamaño 2 (Ej. 50 ml)</label>
+                                <input type="text" id="prod-t2-name" placeholder="50 ml" class="w-full bg-inputBg border border-gold/30 rounded-lg px-3 py-2 text-xs text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Precio 2 (L.)</label>
+                                <input type="number" step="0.01" id="prod-t2-price" placeholder="750" class="w-full bg-inputBg border border-gold/30 rounded-lg px-3 py-2 text-xs text-white">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-1">Foto específica Tamaño 2 (Opcional)</label>
+                            <input type="file" id="prod-t2-file" accept="image/*" onchange="previewSizeImage(event, 2)" class="w-full text-[10px] text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded file:bg-gold file:text-black">
+                            <input type="hidden" id="prod-t2-img">
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-darkBg/60 rounded-xl border border-gold/10 space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Tamaño 3 (Ej. 100 ml)</label>
+                                <input type="text" id="prod-t3-name" placeholder="100 ml" class="w-full bg-inputBg border border-gold/30 rounded-lg px-3 py-2 text-xs text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Precio 3 (L.)</label>
+                                <input type="number" step="0.01" id="prod-t3-price" placeholder="1200" class="w-full bg-inputBg border border-gold/30 rounded-lg px-3 py-2 text-xs text-white">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-1">Foto específica Tamaño 3 (Opcional)</label>
+                            <input type="file" id="prod-t3-file" accept="image/*" onchange="previewSizeImage(event, 3)" class="w-full text-[10px] text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded file:bg-gold file:text-black">
+                            <input type="hidden" id="prod-t3-img">
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1">Fotografía Principal (Enlace o URL)</label>
-                    <input type="text" id="prod-img-base64" placeholder="https://..." class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py-2 text-xs text-white">
+                    <label class="block text-xs font-medium text-gray-400 mb-1">Fotografía Principal / General *</label>
+                    <input type="file" id="prod-img-file" accept="image/*" onchange="previewLocalImage(event)" class="w-full text-xs text-gray-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:bg-gold file:text-black">
+                    <input type="hidden" id="prod-img-base64">
                 </div>
 
-                <button type="submit" class="w-full py-3 gold-bg text-black font-semibold rounded-xl text-sm mt-4">Guardar Cambios</button>
+                <button type="submit" class="w-full py-3 gold-bg text-black font-semibold rounded-xl text-sm mt-4">Guardar en la Nube</button>
             </form>
         </div>
     </div>
@@ -247,83 +290,47 @@
     </div>
 
     <script>
-        // Los 39 perfumes reales de tus capturas anteriores
-        const defaultPerfumes = [
-            { id: "p_1", name: "Hawas Ice EDP", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_2", name: "Hawas la mar", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_3", name: "Hawas para él fuego", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_4", name: "Hawas Malibu", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_5", name: "Hawas Exótico", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_6", name: "Hawas negro", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_7", name: "Alteza Hawas", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_8", name: "Hawas kobra", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_9", name: "Elixir de Hawas", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_10", name: "Hawas Tropical", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_11", name: "Cromo Hawas para él", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_12", name: "Hawas Londres", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_13", name: "Hawas Nautileus", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_14", name: "Hawas Atlantis para él", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_15", name: "Hawas Víbora para él", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_16", name: "Sobredosis de Hawas", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_17", name: "Hawas Majestic", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_18", name: "Cazaforro de Hawas", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_19", name: "Hawas para su Diva (M)", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_20", name: "Hawas para Ella (M)", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_21", name: "Hawas Reina (U)", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_22", name: "Hawas Rosa para Ella (M)", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_23", name: "Hawas Rouge (M)", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_24", name: "Hawas para su Eclat (M)", brand: "Rasasi", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1250 }] },
-            { id: "p_25", name: "Club de Nuit Intense Man", brand: "Armaf", status: "disponible", image: "", sizes: [{ name: "105 ml", price: 1100 }] },
-            { id: "p_26", name: "Club de Nuit Urban Man Elixir", brand: "Armaf", status: "disponible", image: "", sizes: [{ name: "105 ml", price: 1150 }] },
-            { id: "p_27", name: "Club de Nuit Azul Icónico", brand: "Armaf", status: "disponible", image: "", sizes: [{ name: "105 ml", price: 1150 }] },
-            { id: "p_28", name: "Club de Nuit Sillage", brand: "Armaf", status: "disponible", image: "", sizes: [{ name: "105 ml", price: 1100 }] },
-            { id: "p_29", name: "Club de Nuit Elite", brand: "Armaf", status: "disponible", image: "", sizes: [{ name: "105 ml", price: 1200 }] },
-            { id: "p_30", name: "Club de Nuit Precieux I Extrait", brand: "Armaf", status: "disponible", image: "", sizes: [{ name: "105 ml", price: 1300 }] },
-            { id: "p_31", name: "Odyssey Mandarin Sky EDP", brand: "Armaf", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1000 }] },
-            { id: "p_32", name: "Odyssey Aqua Edition EDP", brand: "Armaf", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1000 }] },
-            { id: "p_33", name: "Ariana Grande Cloud EDP", brand: "Ariana Grande", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1200 }] },
-            { id: "p_34", name: "Xerjoff Erba Pura EDP", brand: "Xerjoff", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 2500 }] },
-            { id: "p_35", name: "Alejandria II", brand: "Xerjoff", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 2600 }] },
-            { id: "p_36", name: "Asad", brand: "Lattafa", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 950 }] },
-            { id: "p_37", name: "Piel degradada", brand: "Tom Ford", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 1800 }] },
-            { id: "p_38", name: "El Elixir Masculino", brand: "Jean Paul Gaultier", status: "disponible", image: "", sizes: [{ name: "125 ml", price: 2100 }] },
-            { id: "p_39", name: "Yara Original (Rosa)", brand: "Lattafa", status: "disponible", image: "", sizes: [{ name: "100 ml", price: 900 }] }
-        ];
+        const SUPABASE_URL = "https://wmeuxrewvannqtlkatxo.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_I9YcWNSitzE-AdB8rzq_7g_kDU1fyiw";
+        
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let perfumes = [];
         let cart = [];
         let isAdmin = false;
+        let currentBrand = 'Todos';
         let adminPassword = 'Lineapura1010';
         let whatsappNumber = '50400000000';
-        let currentBrand = 'Todos';
-        let currentPage = 1;
-        const itemsPerPage = 8;
 
         window.onload = function() {
             loadCartAndSettings();
-            loadProducts();
+            loadFromSupabase();
         };
 
         function loadCartAndSettings() {
             const storedCart = localStorage.getItem('linea_pura_cart');
             if (storedCart) { try { cart = JSON.parse(storedCart); } catch (e) { cart = []; } }
+
             const storedPass = localStorage.getItem('linea_pura_pass');
             if (storedPass) { adminPassword = storedPass; }
+
             const storedWa = localStorage.getItem('linea_pura_whatsapp');
             if (storedWa) { whatsappNumber = storedWa; }
+
+            isAdmin = false;
         }
 
-        function loadProducts() {
-            const localSaved = localStorage.getItem('linea_pura_local_perfumes');
-            if (localSaved) {
-                try {
-                    perfumes = JSON.parse(localSaved);
-                } catch(e) {
-                    perfumes = defaultPerfumes;
+        async function loadFromSupabase() {
+            try {
+                let { data, error } = await _supabase.from('perfumes').select('*');
+                if (error || !data) {
+                    perfumes = [];
+                } else {
+                    perfumes = data;
                 }
-            } else {
-                perfumes = defaultPerfumes;
-                localStorage.setItem('linea_pura_local_perfumes', JSON.stringify(perfumes));
+            } catch (err) {
+                perfumes = [];
             }
             renderBrandFilters();
             renderProducts();
@@ -331,27 +338,31 @@
             updateBrandsDatalist();
         }
 
-        function saveLocalProducts() {
-            localStorage.setItem('linea_pura_local_perfumes', JSON.stringify(perfumes));
-            renderBrandFilters();
-            renderProducts();
-            updateBrandsDatalist();
+        async function saveToSupabase(product) {
+            showToast('Guardando en la nube...', 'info');
+            const { error } = await _supabase.from('perfumes').upsert(product);
+            if (!error) {
+                showToast('¡Guardado con éxito en la nube!', 'success');
+                loadFromSupabase();
+            } else {
+                showToast('Error al guardar en la nube', 'error');
+            }
         }
 
-        function resetToOriginalCatalog() {
-            if (confirm('¿Deseas restaurar la lista completa original de tus perfumes?')) {
-                perfumes = defaultPerfumes;
-                localStorage.setItem('linea_pura_local_perfumes', JSON.stringify(perfumes));
-                renderBrandFilters();
-                renderProducts();
-                updateBrandsDatalist();
-                showToast('Catálogo restaurado correctamente', 'success');
+        async function deleteFromSupabase(id) {
+            showToast('Eliminando...', 'info');
+            const { error } = await _supabase.from('perfumes').delete().eq('id', id);
+            if (!error) {
+                showToast('Eliminado correctamente', 'success');
+                loadFromSupabase();
+            } else {
+                showToast('Error al eliminar', 'error');
             }
         }
 
         function getBrands() {
-            const brandsSet = new Set(perfumes.map(p => (p.marca || p.brand || '').trim()));
-            return ['Todos', ...Array.from(brandsSet).filter(b => b !== '').sort()];
+            const brandsSet = new Set(perfumes.map(p => (p.brand || '').trim()));
+            return ['Todos', ...Array.from(brandsSet).sort()];
         }
 
         function renderBrandFilters() {
@@ -368,33 +379,41 @@
 
         function setBrand(brand) {
             currentBrand = brand;
-            currentPage = 1;
             renderBrandFilters();
             renderProducts();
         }
 
         function updateBrandsDatalist() {
             const datalist = document.getElementById('brands-datalist');
-            const brands = Array.from(new Set(perfumes.map(p => (p.marca || p.brand || '').trim()))).filter(b => b !== '').sort();
+            const brands = Array.from(new Set(perfumes.map(p => (p.brand || '').trim()))).sort();
             datalist.innerHTML = brands.map(b => `<option value="${b}">`).join('');
         }
 
         function updateCardSelection(productId, selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const price = selectedOption.getAttribute('data-price');
+            const img = selectedOption.getAttribute('data-img');
+
             document.getElementById(`price-display-${productId}`).innerText = `L. ${parseFloat(price).toFixed(2)}`;
+            
+            if (img && img !== 'null' && img !== '') {
+                document.getElementById(`img-display-${productId}`).src = img;
+            } else {
+                const product = perfumes.find(i => i.id === productId);
+                if (product) {
+                    document.getElementById(`img-display-${productId}`).src = product.image;
+                }
+            }
         }
 
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
-            const paginationContainer = document.getElementById('pagination-container');
-
             const searchQuery = document.getElementById('search-input').value.toLowerCase() || document.getElementById('search-input-mobile').value.toLowerCase();
 
             let filtered = perfumes.filter(p => {
-                const brand = p.marca || p.brand || '';
-                const name = p.nombre || p.name || '';
+                const brand = p.brand || '';
+                const name = p.name || '';
                 const matchesBrand = currentBrand === 'Todos' || brand.toLowerCase() === currentBrand.toLowerCase();
                 const matchesSearch = name.toLowerCase().includes(searchQuery) || brand.toLowerCase().includes(searchQuery);
                 return matchesBrand && matchesSearch;
@@ -402,90 +421,68 @@
 
             if (filtered.length === 0) {
                 grid.innerHTML = '';
-                paginationContainer.innerHTML = '';
                 emptyState.classList.remove('hidden');
                 return;
             }
 
             emptyState.classList.add('hidden');
-
-            const totalPages = Math.ceil(filtered.length / itemsPerPage);
-            if (currentPage > totalPages) currentPage = 1;
-
-            const startIdx = (currentPage - 1) * itemsPerPage;
-            const paginatedItems = filtered.slice(startIdx, startIdx + itemsPerPage);
-
-            grid.innerHTML = paginatedItems.map(p => {
-                const prodId = p.id || p.identificación;
-                const prodName = p.nombre || p.name || 'Perfume Exclusivo';
-                const prodBrand = p.marca || p.brand || 'Línea Pura';
-                const prodImage = p.image || p.imagen || '';
+            grid.innerHTML = filtered.map(p => {
                 const status = p.status || 'disponible';
                 let statusBadge = '';
                 
                 let sizes = p.sizes || [];
                 if (sizes.length === 0 && p.volume && p.price) {
-                    sizes = [{ name: p.volume, price: p.price }];
-                } else if (sizes.length === 0) {
-                    sizes = [{ name: '100 ml', price: 1250 }];
+                    sizes = [{ name: p.volume, price: p.price, image: p.image }];
                 }
 
                 const initialPrice = sizes.length > 0 ? sizes[0].price : 0;
+                const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : p.image;
 
                 let actionButton = `
                     <div class="space-y-2">
                         ${sizes.length > 0 ? `
-                            <select id="size-select-${prodId}" onchange="updateCardSelection('${prodId}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-1.5 text-xs text-gold font-medium focus:outline-none focus:border-gold">
-                                ${sizes.map((s, idx) => `<option value="${s.name}" data-price="${s.price}" ${idx === 0 ? 'selected' : ''}>${s.name} - L. ${parseFloat(s.price || 0).toFixed(2)}</option>`).join('')}
+                            <select id="size-select-${p.id}" onchange="updateCardSelection('${p.id}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-1.5 text-xs text-gold font-medium focus:outline-none focus:border-gold">
+                                ${sizes.map((s, idx) => `<option value="${s.name}" data-price="${s.price}" data-img="${s.image || ''}" ${idx === 0 ? 'selected' : ''}>${s.name} - L. ${parseFloat(s.price).toFixed(2)}</option>`).join('')}
                             </select>
                         ` : ''}
-                        <button onclick="addToCartWithSelectedSize('${prodId}')" class="w-full py-2.5 px-3 gold-bg text-black font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md">
+                        <button onclick="addToCartWithSelectedSize('${p.id}')" class="w-full py-2.5 px-3 gold-bg text-black font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md">
                             <i class="fa-solid fa-cart-plus text-sm"></i><span>Agregar al Carrito</span>
                         </button>
                     </div>
                 `;
 
                 if (status === 'agotado') {
-                    statusBadge = `<div class="absolute top-3 right-3 z-10 bg-red-900/95 text-red-200 border border-red-500 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Agotado</div>`;
+                    statusBadge = `<div class="absolute top-3 right-12 z-10 bg-red-900/90 text-red-200 border border-red-500/50 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Agotado</div>`;
                     actionButton = `<button disabled class="w-full py-2.5 px-3 bg-gray-800 text-gray-500 font-semibold rounded-xl text-xs cursor-not-allowed flex items-center justify-center space-x-1.5"><i class="fa-solid fa-ban text-sm"></i><span>Agotado</span></button>`;
                 } else if (status === 'proximamente') {
-                    statusBadge = `<div class="absolute top-3 right-3 z-10 bg-amber-900/95 text-amber-200 border border-amber-500 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Próximamente</div>`;
+                    statusBadge = `<div class="absolute top-3 right-12 z-10 bg-amber-900/90 text-amber-200 border border-amber-500/50 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Próximamente</div>`;
                     actionButton = `<button disabled class="w-full py-2.5 px-3 bg-gray-800 text-amber-400 font-semibold rounded-xl text-xs cursor-not-allowed flex items-center justify-center space-x-1.5"><i class="fa-solid fa-clock text-sm"></i><span>Próximamente</span></button>`;
                 }
-
-                let imageHtml = prodImage ? 
-                    `<img id="img-display-${prodId}" src="${prodImage}" alt="${prodName}" class="h-full w-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">` :
-                    `<div class="flex flex-col items-center justify-center text-center p-4"><i class="fa-solid fa-gem text-gold/40 text-3xl mb-2"></i><span class="font-cinzel text-xs text-gold/80 uppercase tracking-widest">${prodBrand}</span></div>`;
 
                 return `
                     <div class="bg-cardBg border border-gold/20 rounded-2xl overflow-hidden shadow-xl hover:border-gold/50 transition duration-300 flex flex-col group relative">
                         <div class="absolute top-3 left-3 z-10 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30">
-                            <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${prodBrand}</span>
+                            <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${p.brand}</span>
                         </div>
                         ${statusBadge}
                         ${isAdmin ? `
-                            <div class="absolute top-3 right-3 z-10 flex space-x-1.5 bg-black/80 p-1 rounded-full border border-gold/40">
-                                <button onclick="openEditProductModal('${prodId}')" title="Editar" class="w-7 h-7 rounded-full bg-gold text-black hover:opacity-85 flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
-                                <button onclick="deleteProduct('${prodId}')" title="Eliminar" class="w-7 h-7 rounded-full bg-red-600 text-white hover:opacity-85 flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
+                            <div class="absolute top-3 right-3 z-10 flex space-x-1.5">
+                                <button onclick="openEditProductModal('${p.id}')" title="Editar Completo" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteFromSupabase('${p.id}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         ` : ''}
-                        <div class="relative h-64 overflow-hidden bg-inputBg flex items-center justify-center">
-                            ${imageHtml}
+                        <div class="relative h-64 overflow-hidden bg-inputBg flex items-center justify-center p-4">
+                            <img id="img-display-${p.id}" src="${initialImage}" alt="${p.name}" class="h-full w-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">
                         </div>
                         <div class="p-5 flex-1 flex flex-col justify-between">
                             <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <h4 class="font-cinzel font-bold text-lg text-white group-hover:text-gold transition">${prodName}</h4>
-                                    <span class="text-[10px] bg-gold/10 text-gold border border-gold/30 px-2 py-0.5 rounded-full font-medium tracking-wide flex items-center gap-1">
-                                        <i class="fa-solid fa-check text-[9px]"></i> 100% Original
-                                    </span>
-                                </div>
+                                <h4 class="font-cinzel font-bold text-lg text-white mb-1 group-hover:text-gold transition">${p.name}</h4>
                                 <p class="text-xs text-gray-400 mb-3">${sizes.length === 1 ? sizes[0].name : 'Varios tamaños disponibles'}</p>
                             </div>
                             <div>
                                 <div class="flex items-center justify-between mb-3">
                                     <span class="text-xs text-gray-400">Precio:</span>
-                                    <span id="price-display-${prodId}" class="font-cinzel text-xl font-bold text-gold">L. ${parseFloat(initialPrice).toFixed(2)}</span>
+                                    <span id="price-display-${p.id}" class="font-cinzel text-xl font-bold text-gold">L. ${parseFloat(initialPrice).toFixed(2)}</span>
                                 </div>
                                 ${actionButton}
                             </div>
@@ -493,45 +490,14 @@
                     </div>
                 `;
             }).join('');
-
-            if (totalPages > 1) {
-                let paginationHtml = `
-                    <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-4 py-2 rounded-xl bg-inputBg border border-gold/20 text-gray-600 cursor-not-allowed text-xs"' : 'class="px-4 py-2 rounded-xl bg-cardBg border border-gold/40 text-gold hover:bg-gold hover:text-black transition text-xs font-semibold"'}>
-                        <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
-                    </button>
-                `;
-                for (let i = 1; i <= totalPages; i++) {
-                    paginationHtml += `
-                        <button onclick="changePage(${i})" class="w-9 h-9 rounded-xl text-xs font-bold transition ${currentPage === i ? 'gold-bg text-black shadow-md' : 'bg-cardBg border border-gold/30 text-gray-300 hover:border-gold'}">
-                            ${i}
-                        </button>
-                    `;
-                }
-                paginationHtml += `
-                    <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-4 py-2 rounded-xl bg-inputBg border border-gold/20 text-gray-600 cursor-not-allowed text-xs"' : 'class="px-4 py-2 rounded-xl bg-cardBg border border-gold/40 text-gold hover:bg-gold hover:text-black transition text-xs font-semibold"'}>
-                        Siguiente <i class="fa-solid fa-chevron-right ml-1"></i>
-                    </button>
-                `;
-                paginationContainer.innerHTML = paginationHtml;
-            } else {
-                paginationContainer.innerHTML = '';
-            }
-        }
-
-        function changePage(page) {
-            currentPage = page;
-            renderProducts();
-            window.scrollTo({ top: 300, behavior: 'smooth' });
         }
 
         function filterProducts() {
-            currentPage = 1;
             document.getElementById('search-input-mobile').value = document.getElementById('search-input').value;
             renderProducts();
         }
 
         function filterProductsMobile() {
-            currentPage = 1;
             document.getElementById('search-input').value = document.getElementById('search-input-mobile').value;
             renderProducts();
         }
@@ -589,35 +555,77 @@
             document.getElementById('prod-name').value = '';
             document.getElementById('prod-brand').value = '';
             document.getElementById('prod-status').value = 'disponible';
-            document.getElementById('prod-t1-name').value = '100 ml';
-            document.getElementById('prod-t1-price').value = '1250';
+            
+            document.getElementById('prod-t1-name').value = '';
+            document.getElementById('prod-t1-price').value = '';
+            document.getElementById('prod-t1-img').value = '';
+            document.getElementById('prod-t1-file').value = '';
+
+            document.getElementById('prod-t2-name').value = '';
+            document.getElementById('prod-t2-price').value = '';
+            document.getElementById('prod-t2-img').value = '';
+            document.getElementById('prod-t2-file').value = '';
+
+            document.getElementById('prod-t3-name').value = '';
+            document.getElementById('prod-t3-price').value = '';
+            document.getElementById('prod-t3-img').value = '';
+            document.getElementById('prod-t3-file').value = '';
+
+            document.getElementById('prod-img-file').value = '';
             document.getElementById('prod-img-base64').value = '';
             updateBrandsDatalist();
 
             if (id) {
                 document.getElementById('product-modal-title').innerText = 'Editar Perfume';
-                const p = perfumes.find(i => i.id === id || i.identificación === id);
+                const p = perfumes.find(i => i.id === id);
                 if (p) {
-                    document.getElementById('edit-product-id').value = p.id || p.identificación;
-                    document.getElementById('prod-name').value = p.nombre || p.name || '';
-                    document.getElementById('prod-brand').value = p.marca || p.brand || '';
+                    document.getElementById('edit-product-id').value = p.id;
+                    document.getElementById('prod-name').value = p.name;
+                    document.getElementById('prod-brand').value = p.brand;
                     document.getElementById('prod-status').value = p.status || 'disponible';
-                    document.getElementById('prod-img-base64').value = p.image || p.imagen || '';
+                    document.getElementById('prod-img-base64').value = p.image;
 
                     const sizes = p.sizes || [];
-                    if (sizes[0]) {
-                        document.getElementById('prod-t1-name').value = sizes[0].name;
-                        document.getElementById('prod-t1-price').value = sizes[0].price;
+                    if (sizes[0]) { 
+                        document.getElementById('prod-t1-name').value = sizes[0].name; 
+                        document.getElementById('prod-t1-price').value = sizes[0].price; 
+                        document.getElementById('prod-t1-img').value = sizes[0].image || ''; 
+                    }
+                    if (sizes[1]) { 
+                        document.getElementById('prod-t2-name').value = sizes[1].name; 
+                        document.getElementById('prod-t2-price').value = sizes[1].price; 
+                        document.getElementById('prod-t2-img').value = sizes[1].image || ''; 
+                    }
+                    if (sizes[2]) { 
+                        document.getElementById('prod-t3-name').value = sizes[2].name; 
+                        document.getElementById('prod-t3-price').value = sizes[2].price; 
+                        document.getElementById('prod-t3-img').value = sizes[2].image || ''; 
                     }
                 }
-            } else {
-                document.getElementById('product-modal-title').innerText = 'Agregar Nuevo Perfume';
-            }
+            } else { document.getElementById('product-modal-title').innerText = 'Agregar Nuevo Perfume'; }
             document.getElementById('product-modal').classList.remove('hidden');
         }
 
         function openEditProductModal(id) { openProductModal(id); }
         function closeProductModal() { document.getElementById('product-modal').classList.add('hidden'); }
+
+        function previewLocalImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) { document.getElementById('prod-img-base64').value = e.target.result; };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function previewSizeImage(event, sizeNum) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) { document.getElementById(`prod-t${sizeNum}-img`).value = e.target.result; };
+                reader.readAsDataURL(file);
+            }
+        }
 
         function saveProduct(event) {
             event.preventDefault();
@@ -625,63 +633,66 @@
             const name = document.getElementById('prod-name').value.trim();
             const brand = document.getElementById('prod-brand').value.trim();
             const status = document.getElementById('prod-status').value;
-            const img = document.getElementById('prod-img-base64').value.trim();
-            
-            const tName = document.getElementById('prod-t1-name').value.trim() || '100 ml';
-            const tPrice = parseFloat(document.getElementById('prod-t1-price').value) || 0;
+            let mainImage = document.getElementById('prod-img-base64').value;
 
             const targetId = editId ? editId : 'p_' + Date.now();
-            const sizes = [{ name: tName, price: tPrice }];
+            if (!mainImage && editId) { mainImage = perfumes.find(i => i.id === editId).image; }
+            if (!mainImage && !editId) { mainImage = 'https://placehold.co/400x400/141414/D4AF37?text=Perfume'; }
 
-            const productData = {
-                id: targetId,
-                identificación: targetId,
-                nombre: name,
-                name: name,
-                marca: brand,
-                brand: brand,
-                status: status,
-                image: img,
-                imagen: img,
-                sizes: sizes
+            let sizes = [];
+
+            const t1Name = document.getElementById('prod-t1-name').value.trim();
+            const t1Price = parseFloat(document.getElementById('prod-t1-price').value);
+            const t1Img = document.getElementById('prod-t1-img').value || mainImage;
+            if (t1Name && !isNaN(t1Price)) sizes.push({ name: t1Name, price: t1Price, image: t1Img });
+
+            const t2Name = document.getElementById('prod-t2-name').value.trim();
+            const t2Price = parseFloat(document.getElementById('prod-t2-price').value);
+            const t2Img = document.getElementById('prod-t2-img').value || mainImage;
+            if (t2Name && !isNaN(t2Price)) sizes.push({ name: t2Name, price: t2Price, image: t2Img });
+
+            const t3Name = document.getElementById('prod-t3-name').value.trim();
+            const t3Price = parseFloat(document.getElementById('prod-t3-price').value);
+            const t3Img = document.getElementById('prod-t3-img').value || mainImage;
+            if (t3Name && !isNaN(t3Price)) sizes.push({ name: t3Name, price: t3Price, image: t3Img });
+
+            if (sizes.length === 0) {
+                showToast('Debes agregar al menos un tamaño y precio', 'error');
+                return;
+            }
+
+            const productData = { 
+                id: targetId, 
+                name, 
+                brand, 
+                volume: sizes[0].name, 
+                price: sizes[0].price, 
+                status, 
+                image: mainImage, 
+                sizes 
             };
 
-            const index = perfumes.findIndex(p => (p.id || p.identificación) === targetId);
-            if (index >= 0) {
-                perfumes[index] = productData;
-            } else {
-                perfumes.unshift(productData);
-            }
-
-            saveLocalProducts();
+            saveToSupabase(productData);
             closeProductModal();
-            showToast('¡Perfume guardado con éxito!', 'success');
-        }
-
-        function deleteProduct(id) {
-            if (confirm('¿Estás seguro de eliminar este perfume?')) {
-                perfumes = perfumes.filter(p => (p.id || p.identificación) !== id);
-                saveLocalProducts();
-                showToast('Perfume eliminado', 'success');
-            }
         }
 
         function addToCartWithSelectedSize(id) {
-            const product = perfumes.find(i => i.id === id || i.identificación === id);
+            const product = perfumes.find(i => i.id === id);
             if (!product || product.status === 'agotado' || product.status === 'proximamente') return;
 
-            let selectedSizeName = '100 ml';
-            let selectedPrice = 1250;
-            let selectedImage = product.image || product.imagen || '';
+            let selectedSizeName = product.volume || 'Estándar';
+            let selectedPrice = product.price;
+            let selectedImage = product.image;
 
             const selectEl = document.getElementById(`size-select-${id}`);
             if (selectEl) {
                 const opt = selectEl.options[selectEl.selectedIndex];
                 selectedSizeName = opt.value;
                 selectedPrice = parseFloat(opt.getAttribute('data-price'));
-            } else if (product.sizes && product.sizes[0]) {
-                selectedSizeName = product.sizes[0].name;
-                selectedPrice = product.sizes[0].price;
+                const customImg = opt.getAttribute('data-img');
+                if (customImg && customImg !== 'null' && customImg !== '') {
+                    selectedImage = customImg;
+                }
             }
 
             const cartItemId = `${id}_${selectedSizeName}`;
@@ -692,9 +703,9 @@
             } else {
                 cart.push({
                     cartItemId,
-                    id: product.id || product.identificación,
-                    name: product.nombre || product.name,
-                    brand: product.marca || product.brand,
+                    id: product.id,
+                    name: product.name,
+                    brand: product.brand,
                     volume: selectedSizeName,
                     price: selectedPrice,
                     image: selectedImage,
@@ -760,9 +771,7 @@
                 total += sub;
                 return `
                     <div class="py-4 flex items-center space-x-3">
-                        <div class="w-14 h-14 rounded-xl border border-gold/30 bg-inputBg flex items-center justify-center">
-                            <i class="fa-solid fa-gem text-gold text-sm"></i>
-                        </div>
+                        <img src="${item.image}" class="w-14 h-14 object-cover rounded-xl border border-gold/30 bg-inputBg" onerror="this.src='https://placehold.co/100x100/141414/D4AF37?text=Perfume'">
                         <div class="flex-1 min-w-0">
                             <span class="text-[10px] text-gold uppercase font-bold">${item.brand}</span>
                             <h5 class="font-cinzel text-sm font-semibold text-white truncate">${item.name}</h5>
