@@ -323,16 +323,16 @@
             isAdmin = false;
         }
 
-        async function loadFromSupabase(retries = 2) {
+        async function loadFromSupabase(retries = 3) {
             isLoading = true;
             dbErrorMsg = null;
             renderProducts();
 
             try {
+                // Traemos todos los registros sin límite estricto para mostrar el catálogo completo
                 let { data, error } = await _supabase
                     .from('perfumes')
-                    .select('id, name, brand, volume, price, status, image, sizes')
-                    .limit(50);
+                    .select('*');
 
                 if (error) {
                     throw new Error(error.message);
@@ -347,7 +347,7 @@
                     setTimeout(() => loadFromSupabase(retries - 1), 1500);
                     return;
                 } else {
-                    dbErrorMsg = "El servidor tardó demasiado en responder (Timeout). Haz clic en reintentar.";
+                    dbErrorMsg = "El servidor tardó demasiado en responder. Haz clic en Actualizar Catálogo.";
                     perfumes = [];
                 }
             } finally {
@@ -384,8 +384,8 @@
         }
 
         function getBrands() {
-            const brandsSet = new Set(perfumes.map(p => (p.brand || '').trim()));
-            return ['Todos', ...Array.from(brandsSet).sort()];
+            const brandsSet = new Set(perfumes.map(p => (p.marca || p.brand || '').trim()));
+            return ['Todos', ...Array.from(brandsSet).filter(b => b !== '').sort()];
         }
 
         function renderBrandFilters() {
@@ -408,7 +408,7 @@
 
         function updateBrandsDatalist() {
             const datalist = document.getElementById('brands-datalist');
-            const brands = Array.from(new Set(perfumes.map(p => (p.brand || '').trim()))).sort();
+            const brands = Array.from(new Set(perfumes.map(p => (p.marca || p.brand || '').trim()))).filter(b => b !== '').sort();
             datalist.innerHTML = brands.map(b => `<option value="${b}">`).join('');
         }
 
@@ -422,9 +422,9 @@
             if (img && img !== 'null' && img !== '') {
                 document.getElementById(`img-display-${productId}`).src = img;
             } else {
-                const product = perfumes.find(i => i.id === productId);
+                const product = perfumes.find(i => i.id === productId || i.identificación === productId);
                 if (product) {
-                    document.getElementById(`img-display-${productId}`).src = product.image;
+                    document.getElementById(`img-display-${productId}`).src = product.image || product.imagen || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume';
                 }
             }
         }
@@ -460,8 +460,8 @@
             const searchQuery = document.getElementById('search-input').value.toLowerCase() || document.getElementById('search-input-mobile').value.toLowerCase();
 
             let filtered = perfumes.filter(p => {
-                const brand = p.brand || '';
-                const name = p.name || '';
+                const brand = p.marca || p.brand || '';
+                const name = p.nombre || p.name || '';
                 const matchesBrand = currentBrand === 'Todos' || brand.toLowerCase() === currentBrand.toLowerCase();
                 const matchesSearch = name.toLowerCase().includes(searchQuery) || brand.toLowerCase().includes(searchQuery);
                 return matchesBrand && matchesSearch;
@@ -475,25 +475,31 @@
 
             emptyState.classList.add('hidden');
             grid.innerHTML = filtered.map(p => {
+                const prodId = p.id || p.identificación;
+                const prodName = p.nombre || p.name || 'Perfume Exclusivo';
+                const prodBrand = p.marca || p.brand || 'Línea Pura';
+                const prodImage = p.image || p.imagen || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume';
                 const status = p.status || 'disponible';
                 let statusBadge = '';
                 
                 let sizes = p.sizes || [];
                 if (sizes.length === 0 && p.volume && p.price) {
-                    sizes = [{ name: p.volume, price: p.price, image: p.image }];
+                    sizes = [{ name: p.volume, price: p.price, image: prodImage }];
+                } else if (sizes.length === 0) {
+                    sizes = [{ name: 'Estándar', price: p.price || 0, image: prodImage }];
                 }
 
                 const initialPrice = sizes.length > 0 ? sizes[0].price : 0;
-                const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : p.image;
+                const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : prodImage;
 
                 let actionButton = `
                     <div class="space-y-2">
                         ${sizes.length > 0 ? `
-                            <select id="size-select-${p.id}" onchange="updateCardSelection('${p.id}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-1.5 text-xs text-gold font-medium focus:outline-none focus:border-gold">
-                                ${sizes.map((s, idx) => `<option value="${s.name}" data-price="${s.price}" data-img="${s.image || ''}" ${idx === 0 ? 'selected' : ''}>${s.name} - L. ${parseFloat(s.price).toFixed(2)}</option>`).join('')}
+                            <select id="size-select-${prodId}" onchange="updateCardSelection('${prodId}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-1.5 text-xs text-gold font-medium focus:outline-none focus:border-gold">
+                                ${sizes.map((s, idx) => `<option value="${s.name}" data-price="${s.price}" data-img="${s.image || ''}" ${idx === 0 ? 'selected' : ''}>${s.name} - L. ${parseFloat(s.price || 0).toFixed(2)}</option>`).join('')}
                             </select>
                         ` : ''}
-                        <button onclick="addToCartWithSelectedSize('${p.id}')" class="w-full py-2.5 px-3 gold-bg text-black font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md">
+                        <button onclick="addToCartWithSelectedSize('${prodId}')" class="w-full py-2.5 px-3 gold-bg text-black font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md">
                             <i class="fa-solid fa-cart-plus text-sm"></i><span>Agregar al Carrito</span>
                         </button>
                     </div>
@@ -510,23 +516,22 @@
                 return `
                     <div class="bg-cardBg border border-gold/20 rounded-2xl overflow-hidden shadow-xl hover:border-gold/50 transition duration-300 flex flex-col group relative">
                         <div class="absolute top-3 left-3 z-10 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30">
-                            <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${p.brand}</span>
+                            <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${prodBrand}</span>
                         </div>
                         ${statusBadge}
                         ${isAdmin ? `
                             <div class="absolute top-3 right-3 z-10 flex space-x-1.5">
-                                <button onclick="openEditProductModal('${p.id}')" title="Editar Completo" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
-                                <button onclick="deleteFromSupabase('${p.id}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
+                                <button onclick="openEditProductModal('${prodId}')" title="Editar Completo" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteFromSupabase('${prodId}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         ` : ''}
                         <div class="relative h-64 overflow-hidden bg-inputBg flex items-center justify-center p-4">
-                            <img id="img-display-${p.id}" src="${initialImage}" alt="${p.name}" class="h-full w-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">
+                            <img id="img-display-${prodId}" src="${initialImage}" alt="${prodName}" class="h-full w-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">
                         </div>
                         <div class="p-5 flex-1 flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center justify-between mb-1">
-                                    <h4 class="font-cinzel font-bold text-lg text-white group-hover:text-gold transition">${p.name}</h4>
-                                    <!-- Insignia de 100% Original -->
+                                    <h4 class="font-cinzel font-bold text-lg text-white group-hover:text-gold transition">${prodName}</h4>
                                     <span class="text-[10px] bg-gold/10 text-gold border border-gold/30 px-2 py-0.5 rounded-full font-medium tracking-wide flex items-center gap-1">
                                         <i class="fa-solid fa-check text-[9px]"></i> 100% Original
                                     </span>
@@ -536,7 +541,7 @@
                             <div>
                                 <div class="flex items-center justify-between mb-3">
                                     <span class="text-xs text-gray-400">Precio:</span>
-                                    <span id="price-display-${p.id}" class="font-cinzel text-xl font-bold text-gold">L. ${parseFloat(initialPrice).toFixed(2)}</span>
+                                    <span id="price-display-${prodId}" class="font-cinzel text-xl font-bold text-gold">L. ${parseFloat(initialPrice).toFixed(2)}</span>
                                 </div>
                                 ${actionButton}
                             </div>
@@ -631,13 +636,13 @@
 
             if (id) {
                 document.getElementById('product-modal-title').innerText = 'Editar Perfume';
-                const p = perfumes.find(i => i.id === id);
+                const p = perfumes.find(i => i.id === id || i.identificación === id);
                 if (p) {
-                    document.getElementById('edit-product-id').value = p.id;
-                    document.getElementById('prod-name').value = p.name;
-                    document.getElementById('prod-brand').value = p.brand;
+                    document.getElementById('edit-product-id').value = p.id || p.identificación;
+                    document.getElementById('prod-name').value = p.nombre || p.name || '';
+                    document.getElementById('prod-brand').value = p.marca || p.brand || '';
                     document.getElementById('prod-status').value = p.status || 'disponible';
-                    document.getElementById('prod-img-base64').value = p.image;
+                    document.getElementById('prod-img-base64').value = p.image || p.imagen || '';
 
                     const sizes = p.sizes || [];
                     if (sizes[0]) { 
@@ -690,8 +695,11 @@
             let mainImage = document.getElementById('prod-img-base64').value;
 
             const targetId = editId ? editId : 'p_' + Date.now();
-            if (!mainImage && editId) { mainImage = perfumes.find(i => i.id === editId).image; }
-            if (!mainImage && !editId) { mainImage = 'https://placehold.co/400x400/141414/D4AF37?text=Perfume'; }
+            if (!mainImage && editId) { 
+                const existingP = perfumes.find(i => i.id === editId || i.identificación === editId);
+                mainImage = existingP ? (existingP.image || existingP.imagen || '') : ''; 
+            }
+            if (!mainImage) { mainImage = 'https://placehold.co/400x400/141414/D4AF37?text=Perfume'; }
 
             let sizes = [];
 
@@ -717,12 +725,16 @@
 
             const productData = { 
                 id: targetId, 
-                name, 
-                brand, 
+                identificación: targetId,
+                nombre: name,
+                name: name, 
+                marca: brand,
+                brand: brand, 
                 volume: sizes[0].name, 
                 price: sizes[0].price, 
                 status, 
-                image: mainImage, 
+                image: mainImage,
+                imagen: mainImage,
                 sizes 
             };
 
@@ -731,12 +743,12 @@
         }
 
         function addToCartWithSelectedSize(id) {
-            const product = perfumes.find(i => i.id === id);
+            const product = perfumes.find(i => i.id === id || i.identificación === id);
             if (!product || product.status === 'agotado' || product.status === 'proximamente') return;
 
             let selectedSizeName = product.volume || 'Estándar';
-            let selectedPrice = product.price;
-            let selectedImage = product.image;
+            let selectedPrice = product.price || 0;
+            let selectedImage = product.image || product.imagen || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume';
 
             const selectEl = document.getElementById(`size-select-${id}`);
             if (selectEl) {
@@ -757,9 +769,9 @@
             } else {
                 cart.push({
                     cartItemId,
-                    id: product.id,
-                    name: product.name,
-                    brand: product.brand,
+                    id: product.id || product.identificación,
+                    name: product.nombre || product.name,
+                    brand: product.marca || product.brand,
                     volume: selectedSizeName,
                     price: selectedPrice,
                     image: selectedImage,
@@ -841,7 +853,7 @@
                     </div>
                 `;
             }).join('');
-            totalPriceEl.innerText = `L. ${total.toFixed(2)}`;
+            totalPriceEn.innerText = `L. ${total.toFixed(2)}`;
         }
 
         function checkoutWhatsApp() {
