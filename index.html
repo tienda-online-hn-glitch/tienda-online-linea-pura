@@ -67,7 +67,7 @@
                     <span id="cart-badge" class="absolute -top-1 -right-1 bg-gold text-black font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center scale-0 transition-transform duration-300">0</span>
                 </button>
                 <div id="admin-indicator" class="hidden items-center space-x-2">
-                    <span class="text-xs text-gold font-semibold hidden sm:inline">Admin Activo</span>
+                    <span class="text-xs text-gold font-semibold hidden sm:inline">Admin Nube Activo</span>
                     <button onclick="logoutAdmin()" class="px-3 py-1.5 rounded-full border border-gold/40 text-xs text-gold hover:bg-gold hover:text-black transition" title="Salir de Admin">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
@@ -104,8 +104,8 @@
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div id="admin-bar" class="hidden mb-8 p-4 bg-cardBg border border-gold/40 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-lg">
             <div class="flex items-center space-x-3">
-                <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span class="font-cinzel font-semibold text-gold text-sm sm:text-base">Panel de Administración</span>
+                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="font-cinzel font-semibold text-gold text-sm sm:text-base">Panel Admin Sincronizado en la Nube</span>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <button onclick="openProductModal()" class="px-4 py-2 gold-bg text-black font-semibold rounded-lg text-sm transition hover:opacity-90 flex items-center space-x-2">
@@ -113,6 +113,9 @@
                 </button>
                 <button onclick="openWhatsAppConfigModal()" class="px-4 py-2 bg-inputBg border border-gold/40 text-gold hover:bg-gold/10 rounded-lg text-sm transition flex items-center space-x-2">
                     <i class="fa-brands fa-whatsapp"></i><span>Configurar WhatsApp</span>
+                </button>
+                <button onclick="loadFromSupabase()" class="px-4 py-2 bg-inputBg border border-gold text-gold hover:bg-gold/20 rounded-lg text-sm transition flex items-center space-x-2">
+                    <i class="fa-solid fa-rotate"></i><span>Actualizar Catálogo</span>
                 </button>
                 <button onclick="logoutAdmin()" class="px-4 py-2 bg-inputBg border border-gold/30 text-gray-300 hover:text-white rounded-lg text-sm transition">
                     <i class="fa-solid fa-right-from-bracket"></i> Salir
@@ -274,7 +277,7 @@
                     <input type="hidden" id="prod-img-base64">
                 </div>
 
-                <button type="submit" class="w-full py-3 gold-bg text-black font-semibold rounded-xl text-sm mt-4">Guardar Producto</button>
+                <button type="submit" class="w-full py-3 gold-bg text-black font-semibold rounded-xl text-sm mt-4">Guardar en la Nube</button>
             </form>
         </div>
     </div>
@@ -304,14 +307,14 @@
         let whatsappNumber = '50400000000';
         let isLoading = true;
 
-        // Variables de Paginación
+        // Paginación (8 productos por página para que cargue ultra rápido)
         let currentPage = 1;
-        const itemsPerPage = 8; // Muestra 8 perfumes por página para máxima velocidad
+        const itemsPerPage = 8;
 
         window.onload = function() {
             loadCartAndSettings();
             
-            // Carga instantánea desde caché local para evitar pantalla en blanco
+            // Carga instantánea de caché local para mostrar contenido de inmediato
             const localCache = localStorage.getItem('linea_pura_perfumes_cache');
             if (localCache) {
                 try {
@@ -357,7 +360,7 @@
                     localStorage.setItem('linea_pura_perfumes_cache', JSON.stringify(data));
                 }
             } catch (err) {
-                console.warn("Usando respaldo local:", err);
+                console.warn("Usando caché local debido a restricción de red:", err);
             } finally {
                 isLoading = false;
                 renderBrandFilters();
@@ -371,7 +374,7 @@
             showToast('Guardando en la nube...', 'info');
             const { error } = await _supabase.from('perfumes').upsert(product);
             if (!error) {
-                showToast('¡Guardado con éxito!', 'success');
+                showToast('¡Guardado con éxito en la nube!', 'success');
                 loadFromSupabase();
             } else {
                 showToast('Error al guardar: ' + error.message, 'error');
@@ -408,7 +411,7 @@
 
         function setBrand(brand) {
             currentBrand = brand;
-            currentPage = 1; // Reiniciar a la página 1 al filtrar
+            currentPage = 1;
             renderBrandFilters();
             renderProducts();
         }
@@ -472,10 +475,10 @@
 
             emptyState.classList.add('hidden');
 
-            // --- LÓGICA DE PAGINACIÓN ---
+            // --- PAGINACIÓN ---
             const totalPages = Math.ceil(filtered.length / itemsPerPage);
             if (currentPage > totalPages) currentPage = 1;
-            
+
             const startIdx = (currentPage - 1) * itemsPerPage;
             const paginatedItems = filtered.slice(startIdx, startIdx + itemsPerPage);
 
@@ -555,14 +558,13 @@
                 `;
             }).join('');
 
-            // Renderizar botones de paginación si hay más de 1 página
+            // Renderizado de Botones de Paginación
             if (totalPages > 1) {
                 let paginationHtml = `
                     <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-4 py-2 rounded-xl bg-inputBg border border-gold/20 text-gray-600 cursor-not-allowed text-xs"' : 'class="px-4 py-2 rounded-xl bg-cardBg border border-gold/40 text-gold hover:bg-gold hover:text-black transition text-xs font-semibold"'}>
                         <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
                     </button>
                 `;
-                
                 for (let i = 1; i <= totalPages; i++) {
                     paginationHtml += `
                         <button onclick="changePage(${i})" class="w-9 h-9 rounded-xl text-xs font-bold transition ${currentPage === i ? 'gold-bg text-black shadow-md' : 'bg-cardBg border border-gold/30 text-gray-300 hover:border-gold'}">
@@ -570,7 +572,6 @@
                         </button>
                     `;
                 }
-
                 paginationHtml += `
                     <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-4 py-2 rounded-xl bg-inputBg border border-gold/20 text-gray-600 cursor-not-allowed text-xs"' : 'class="px-4 py-2 rounded-xl bg-cardBg border border-gold/40 text-gold hover:bg-gold hover:text-black transition text-xs font-semibold"'}>
                         Siguiente <i class="fa-solid fa-chevron-right ml-1"></i>
