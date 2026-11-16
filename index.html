@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -67,7 +66,7 @@
                     <span id="cart-badge" class="absolute -top-1 -right-1 bg-gold text-black font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center scale-0 transition-transform duration-300">0</span>
                 </button>
                 <div id="admin-indicator" class="hidden items-center space-x-2">
-                    <span class="text-xs text-gold font-semibold hidden sm:inline">Admin Nube Activo</span>
+                    <span class="text-xs text-gold font-semibold hidden sm:inline">Admin Local Activo</span>
                     <button onclick="logoutAdmin()" class="px-3 py-1.5 rounded-full border border-gold/40 text-xs text-gold hover:bg-gold hover:text-black transition" title="Salir de Admin">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
@@ -104,8 +103,8 @@
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div id="admin-bar" class="hidden mb-8 p-4 bg-cardBg border border-gold/40 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-lg">
             <div class="flex items-center space-x-3">
-                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="font-cinzel font-semibold text-gold text-sm sm:text-base">Panel Admin Sincronizado en la Nube</span>
+                <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span class="font-cinzel font-semibold text-gold text-sm sm:text-base">Panel Admin Local Activo</span>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <button onclick="openProductModal()" class="px-4 py-2 gold-bg text-black font-semibold rounded-lg text-sm transition hover:opacity-90 flex items-center space-x-2">
@@ -113,9 +112,6 @@
                 </button>
                 <button onclick="openWhatsAppConfigModal()" class="px-4 py-2 bg-inputBg border border-gold/40 text-gold hover:bg-gold/10 rounded-lg text-sm transition flex items-center space-x-2">
                     <i class="fa-brands fa-whatsapp"></i><span>Configurar WhatsApp</span>
-                </button>
-                <button onclick="loadFromSupabase()" class="px-4 py-2 bg-inputBg border border-gold text-gold hover:bg-gold/20 rounded-lg text-sm transition flex items-center space-x-2">
-                    <i class="fa-solid fa-rotate"></i><span>Actualizar Catálogo</span>
                 </button>
                 <button onclick="logoutAdmin()" class="px-4 py-2 bg-inputBg border border-gold/30 text-gray-300 hover:text-white rounded-lg text-sm transition">
                     <i class="fa-solid fa-right-from-bracket"></i> Salir
@@ -274,7 +270,7 @@
                     <input type="hidden" id="prod-img-base64">
                 </div>
 
-                <button type="submit" class="w-full py-3 gold-bg text-black font-semibold rounded-xl text-sm mt-4">Guardar en la Nube</button>
+                <button type="submit" class="w-full py-3 gold-bg text-black font-semibold rounded-xl text-sm mt-4">Guardar Producto</button>
             </form>
         </div>
     </div>
@@ -290,28 +286,16 @@
     </div>
 
     <script>
-        const SUPABASE_URL = "https://wmeuxrewvannqtlkatxo.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_I9YcWNSitzE-AdB8rzq_7g_kDU1fyiw";
-        
-        const { createClient } = supabase;
-        const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-            db: { schema: 'public' },
-            auth: { persistSession: false },
-            global: { headers: { 'x-client-info': 'linea-pura-web' } }
-        });
-
         let perfumes = [];
         let cart = [];
         let isAdmin = false;
         let currentBrand = 'Todos';
         let adminPassword = 'Lineapura1010';
         let whatsappNumber = '50400000000';
-        let isLoading = true;
-        let dbErrorMsg = null;
 
         window.onload = function() {
             loadCartAndSettings();
-            loadFromSupabase();
+            loadLocalProducts();
         };
 
         function loadCartAndSettings() {
@@ -327,76 +311,69 @@
             isAdmin = false;
         }
 
-        async function loadFromSupabase(retries = 3) {
-            isLoading = true;
-            dbErrorMsg = null;
-            renderProducts();
-
-            try {
-                // Configuramos un AbortController con 20 segundos de margen para evitar timeouts prematuros
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 20000);
-
-                // Limitamos a 15 productos iniciales para que la respuesta sea rapidísima
-                let { data, error } = await _supabase
-                    .from('perfumes')
-                    .select('id, identificación, nombre, name, marca, brand, volume, price, status, image, imagen, sizes')
-                    .limit(15)
-                    .abortSignal(controller.signal);
-
-                clearTimeout(timeoutId);
-
-                if (error) {
-                    throw new Error(error.message);
-                }
-
-                perfumes = data || [];
-                dbErrorMsg = null;
-            } catch (err) {
-                console.warn(`Intento fallido. Quedan ${retries} reintentos...`, err);
-                
-                if (retries > 0) {
-                    setTimeout(() => loadFromSupabase(retries - 1), 2000);
-                    return;
-                } else {
-                    dbErrorMsg = "El servidor de Supabase tardó demasiado en responder.";
+        function loadLocalProducts() {
+            const storedPerfumes = localStorage.getItem('linea_pura_local_perfumes');
+            if (storedPerfumes) {
+                try {
+                    perfumes = JSON.parse(storedPerfumes);
+                } catch(e) {
                     perfumes = [];
                 }
-            } finally {
-                if (retries === 0 || perfumes.length > 0 || dbErrorMsg) {
-                    isLoading = false;
-                    renderBrandFilters();
-                    renderProducts();
-                    updateCartUI();
-                    updateBrandsDatalist();
-                }
-            }
-        }
-
-        async function saveToSupabase(product) {
-            showToast('Guardando en la nube...', 'info');
-            const { error } = await _supabase.from('perfumes').upsert(product);
-            if (!error) {
-                showToast('¡Guardado con éxito en la nube!', 'success');
-                loadFromSupabase();
             } else {
-                showToast('Error al guardar: ' + error.message, 'error');
+                // Productos iniciales de ejemplo si está vacío
+                perfumes = [
+                    {
+                        id: 'p_1',
+                        name: 'Asad Elixir',
+                        brand: 'Lattafa',
+                        status: 'disponible',
+                        image: 'https://placehold.co/400x400/141414/D4AF37?text=Asad+Elixir',
+                        sizes: [{ name: '100 ml', price: 950, image: '' }]
+                    },
+                    {
+                        id: 'p_2',
+                        name: 'Club de Nuit Intense Man',
+                        brand: 'Armaf',
+                        status: 'disponible',
+                        image: 'https://placehold.co/400x400/141414/D4AF37?text=Club+de+Nuit',
+                        sizes: [{ name: '105 ml', price: 1100, image: '' }]
+                    }
+                ];
+                localStorage.setItem('linea_pura_local_perfumes', JSON.stringify(perfumes));
             }
+            renderBrandFilters();
+            renderProducts();
+            updateCartUI();
+            updateBrandsDatalist();
         }
 
-        async function deleteFromSupabase(id) {
-            showToast('Eliminando...', 'info');
-            const { error } = await _supabase.from('perfumes').delete().eq('id', id);
-            if (!error) {
+        function saveLocalProduct(product) {
+            const index = perfumes.findIndex(p => p.id === product.id);
+            if (index >= 0) {
+                perfumes[index] = product;
+            } else {
+                perfumes.unshift(product);
+            }
+            localStorage.setItem('linea_pura_local_perfumes', JSON.stringify(perfumes));
+            showToast('¡Guardado con éxito!', 'success');
+            renderBrandFilters();
+            renderProducts();
+            updateBrandsDatalist();
+        }
+
+        function deleteLocalProduct(id) {
+            if (confirm('¿Estás seguro de eliminar este perfume?')) {
+                perfumes = perfumes.filter(p => p.id !== id);
+                localStorage.setItem('linea_pura_local_perfumes', JSON.stringify(perfumes));
                 showToast('Eliminado correctamente', 'success');
-                loadFromSupabase();
-            } else {
-                showToast('Error al eliminar', 'error');
+                renderBrandFilters();
+                renderProducts();
+                updateBrandsDatalist();
             }
         }
 
         function getBrands() {
-            const brandsSet = new Set(perfumes.map(p => (p.marca || p.brand || '').trim()));
+            const brandsSet = new Set(perfumes.map(p => (p.brand || '').trim()));
             return ['Todos', ...Array.from(brandsSet).filter(b => b !== '').sort()];
         }
 
@@ -420,7 +397,7 @@
 
         function updateBrandsDatalist() {
             const datalist = document.getElementById('brands-datalist');
-            const brands = Array.from(new Set(perfumes.map(p => (p.marca || p.brand || '').trim()))).filter(b => b !== '').sort();
+            const brands = Array.from(new Set(perfumes.map(p => (p.brand || '').trim()))).filter(b => b !== '').sort();
             datalist.innerHTML = brands.map(b => `<option value="${b}">`).join('');
         }
 
@@ -434,9 +411,9 @@
             if (img && img !== 'null' && img !== '') {
                 document.getElementById(`img-display-${productId}`).src = img;
             } else {
-                const product = perfumes.find(i => i.id === productId || i.identificación === productId);
+                const product = perfumes.find(i => i.id === productId);
                 if (product) {
-                    document.getElementById(`img-display-${productId}`).src = product.image || product.imagen || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume';
+                    document.getElementById(`img-display-${productId}`).src = product.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume';
                 }
             }
         }
@@ -444,36 +421,11 @@
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
-
-            if (isLoading) {
-                emptyState.classList.add('hidden');
-                grid.innerHTML = `
-                    <div class="col-span-full flex flex-col items-center justify-center py-24 space-y-4">
-                        <div class="w-12 h-12 border-4 border-gold/20 border-t-gold rounded-full animate-spin"></div>
-                        <p class="font-cinzel text-gold text-sm tracking-widest uppercase animate-pulse">Cargando fragancias...</p>
-                    </div>
-                `;
-                return;
-            }
-
-            if (dbErrorMsg) {
-                emptyState.classList.add('hidden');
-                grid.innerHTML = `
-                    <div class="col-span-full text-center py-16 bg-red-950/30 border border-red-500/40 rounded-2xl p-6">
-                        <i class="fa-solid fa-triangle-exclamation text-4xl text-red-400 mb-3"></i>
-                        <h4 class="font-cinzel text-lg text-red-200 font-bold mb-1">Error de conexión con Supabase</h4>
-                        <p class="text-xs text-red-400 max-w-md mx-auto mb-4">${dbErrorMsg}</p>
-                        <button onclick="loadFromSupabase()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg transition">Reintentar conexión</button>
-                    </div>
-                `;
-                return;
-            }
-
             const searchQuery = document.getElementById('search-input').value.toLowerCase() || document.getElementById('search-input-mobile').value.toLowerCase();
 
             let filtered = perfumes.filter(p => {
-                const brand = p.marca || p.brand || '';
-                const name = p.nombre || p.name || '';
+                const brand = p.brand || '';
+                const name = p.name || '';
                 const matchesBrand = currentBrand === 'Todos' || brand.toLowerCase() === currentBrand.toLowerCase();
                 const matchesSearch = name.toLowerCase().includes(searchQuery) || brand.toLowerCase().includes(searchQuery);
                 return matchesBrand && matchesSearch;
@@ -487,31 +439,25 @@
 
             emptyState.classList.add('hidden');
             grid.innerHTML = filtered.map(p => {
-                const prodId = p.id || p.identificación;
-                const prodName = p.nombre || p.name || 'Perfume Exclusivo';
-                const prodBrand = p.marca || p.brand || 'Línea Pura';
-                const prodImage = p.image || p.imagen || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume';
                 const status = p.status || 'disponible';
                 let statusBadge = '';
                 
                 let sizes = p.sizes || [];
-                if (sizes.length === 0 && p.volume && p.price) {
-                    sizes = [{ name: p.volume, price: p.price, image: prodImage }];
-                } else if (sizes.length === 0) {
-                    sizes = [{ name: 'Estándar', price: p.price || 0, image: prodImage }];
+                if (sizes.length === 0 && p.price) {
+                    sizes = [{ name: 'Estándar', price: p.price, image: p.image }];
                 }
 
                 const initialPrice = sizes.length > 0 ? sizes[0].price : 0;
-                const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : prodImage;
+                const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : p.image;
 
                 let actionButton = `
                     <div class="space-y-2">
                         ${sizes.length > 0 ? `
-                            <select id="size-select-${prodId}" onchange="updateCardSelection('${prodId}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-1.5 text-xs text-gold font-medium focus:outline-none focus:border-gold">
+                            <select id="size-select-${p.id}" onchange="updateCardSelection('${p.id}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-1.5 text-xs text-gold font-medium focus:outline-none focus:border-gold">
                                 ${sizes.map((s, idx) => `<option value="${s.name}" data-price="${s.price}" data-img="${s.image || ''}" ${idx === 0 ? 'selected' : ''}>${s.name} - L. ${parseFloat(s.price || 0).toFixed(2)}</option>`).join('')}
                             </select>
                         ` : ''}
-                        <button onclick="addToCartWithSelectedSize('${prodId}')" class="w-full py-2.5 px-3 gold-bg text-black font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md">
+                        <button onclick="addToCartWithSelectedSize('${p.id}')" class="w-full py-2.5 px-3 gold-bg text-black font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md">
                             <i class="fa-solid fa-cart-plus text-sm"></i><span>Agregar al Carrito</span>
                         </button>
                     </div>
@@ -528,22 +474,22 @@
                 return `
                     <div class="bg-cardBg border border-gold/20 rounded-2xl overflow-hidden shadow-xl hover:border-gold/50 transition duration-300 flex flex-col group relative">
                         <div class="absolute top-3 left-3 z-10 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30">
-                            <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${prodBrand}</span>
+                            <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${p.brand}</span>
                         </div>
                         ${statusBadge}
                         ${isAdmin ? `
                             <div class="absolute top-3 right-3 z-10 flex space-x-1.5">
-                                <button onclick="openEditProductModal('${prodId}')" title="Editar Completo" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
-                                <button onclick="deleteFromSupabase('${prodId}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
+                                <button onclick="openEditProductModal('${p.id}')" title="Editar" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteLocalProduct('${p.id}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         ` : ''}
                         <div class="relative h-64 overflow-hidden bg-inputBg flex items-center justify-center p-4">
-                            <img id="img-display-${prodId}" src="${initialImage}" alt="${prodName}" class="h-full w-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">
+                            <img id="img-display-${p.id}" src="${initialImage}" alt="${p.name}" class="h-full w-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">
                         </div>
                         <div class="p-5 flex-1 flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center justify-between mb-1">
-                                    <h4 class="font-cinzel font-bold text-lg text-white group-hover:text-gold transition">${prodName}</h4>
+                                    <h4 class="font-cinzel font-bold text-lg text-white group-hover:text-gold transition">${p.name}</h4>
                                     <span class="text-[10px] bg-gold/10 text-gold border border-gold/30 px-2 py-0.5 rounded-full font-medium tracking-wide flex items-center gap-1">
                                         <i class="fa-solid fa-check text-[9px]"></i> 100% Original
                                     </span>
@@ -553,7 +499,7 @@
                             <div>
                                 <div class="flex items-center justify-between mb-3">
                                     <span class="text-xs text-gray-400">Precio:</span>
-                                    <span id="price-display-${prodId}" class="font-cinzel text-xl font-bold text-gold">L. ${parseFloat(initialPrice).toFixed(2)}</span>
+                                    <span id="price-display-${p.id}" class="font-cinzel text-xl font-bold text-gold">L. ${parseFloat(initialPrice).toFixed(2)}</span>
                                 </div>
                                 ${actionButton}
                             </div>
@@ -648,13 +594,13 @@
 
             if (id) {
                 document.getElementById('product-modal-title').innerText = 'Editar Perfume';
-                const p = perfumes.find(i => i.id === id || i.identificación === id);
+                const p = perfumes.find(i => i.id === id);
                 if (p) {
-                    document.getElementById('edit-product-id').value = p.id || p.identificación;
-                    document.getElementById('prod-name').value = p.nombre || p.name || '';
-                    document.getElementById('prod-brand').value = p.marca || p.brand || '';
+                    document.getElementById('edit-product-id').value = p.id;
+                    document.getElementById('prod-name').value = p.name;
+                    document.getElementById('prod-brand').value = p.brand;
                     document.getElementById('prod-status').value = p.status || 'disponible';
-                    document.getElementById('prod-img-base64').value = p.image || p.imagen || '';
+                    document.getElementById('prod-img-base64').value = p.image || '';
 
                     const sizes = p.sizes || [];
                     if (sizes[0]) { 
@@ -708,8 +654,8 @@
 
             const targetId = editId ? editId : 'p_' + Date.now();
             if (!mainImage && editId) { 
-                const existingP = perfumes.find(i => i.id === editId || i.identificación === editId);
-                mainImage = existingP ? (existingP.image || existingP.imagen || '') : ''; 
+                const existingP = perfumes.find(i => i.id === editId);
+                mainImage = existingP ? existingP.image : ''; 
             }
             if (!mainImage) { mainImage = 'https://placehold.co/400x400/141414/D4AF37?text=Perfume'; }
 
@@ -737,30 +683,24 @@
 
             const productData = { 
                 id: targetId, 
-                identificación: targetId,
-                nombre: name,
-                name: name, 
-                marca: brand,
-                brand: brand, 
-                volume: sizes[0].name, 
-                price: sizes[0].price, 
+                name, 
+                brand, 
                 status, 
-                image: mainImage,
-                imagen: mainImage,
+                image: mainImage, 
                 sizes 
             };
 
-            saveToSupabase(productData);
+            saveLocalProduct(productData);
             closeProductModal();
         }
 
         function addToCartWithSelectedSize(id) {
-            const product = perfumes.find(i => i.id === id || i.identificación === id);
+            const product = perfumes.find(i => i.id === id);
             if (!product || product.status === 'agotado' || product.status === 'proximamente') return;
 
-            let selectedSizeName = product.volume || 'Estándar';
-            let selectedPrice = product.price || 0;
-            let selectedImage = product.image || product.imagen || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume';
+            let selectedSizeName = product.sizes && product.sizes[0] ? product.sizes[0].name : 'Estándar';
+            let selectedPrice = product.sizes && product.sizes[0] ? product.sizes[0].price : 0;
+            let selectedImage = product.image;
 
             const selectEl = document.getElementById(`size-select-${id}`);
             if (selectEl) {
@@ -781,9 +721,9 @@
             } else {
                 cart.push({
                     cartItemId,
-                    id: product.id || product.identificación,
-                    name: product.nombre || product.name,
-                    brand: product.marca || product.brand,
+                    id: product.id,
+                    name: product.name,
+                    brand: product.brand,
                     volume: selectedSizeName,
                     price: selectedPrice,
                     image: selectedImage,
