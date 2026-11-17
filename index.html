@@ -351,28 +351,47 @@ async function loadFromSupabase() {
   grid.innerHTML = '';
 
   try {
-    // Usamos exactamente los nombres de columnas correctos en inglés de tu base de datos de Supabase
-    let { data, error } = await _supabase
-      .from('perfumes')
-      .select('id, name, brand, status, volume, price, image, sizes')
-      .range(0, 999);
-    
-    if (error) {
-      console.error("Error Supabase:", error);
-      showToast('Error: ' + error.message, 'error');
-      perfumes = [];
-    } else {
-      perfumes = (data || []).map(item => ({
-        id: item.id || 'p_' + Math.random(),
-        name: item.name || 'Sin nombre',
-        brand: item.brand || 'Línea Pura',
-        status: item.status || 'disponible',
-        volume: item.volume || (item.sizes && item.sizes[0] ? item.sizes[0].name : 'Estándar'),
-        price: item.price || (item.sizes && item.sizes[0] ? item.sizes[0].price : 0),
-        image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
-        sizes: item.sizes || []
-      }));
+    // CARGA POR PAGINACIÓN REAL EN BLOQUES DE 100 PARA EVITAR TIMEOUT DE SUPABASE
+    let allData = [];
+    let batchSize = 100;
+    let from = 0;
+    let keepFetching = true;
+
+    while (keepFetching) {
+      let { data, error } = await _supabase
+        .from('perfumes')
+        .select('id, name, brand, status, volume, price, image, sizes')
+        .range(from, from + batchSize - 1);
+
+      if (error) {
+        console.error("Error Supabase:", error);
+        break;
+      }
+
+      if (data && data.length > 0) {
+        allData = allData.concat(data);
+        if (data.length < batchSize) {
+          keepFetching = false;
+        } else {
+          from += batchSize;
+        }
+      } else {
+        keepFetching = false;
+      }
     }
+
+    perfumes = (allData || []).map(item => ({
+      id: item.id || 'p_' + Math.random(),
+      name: item.name || 'Sin nombre',
+      brand: item.brand || 'Línea Pura',
+      status: item.status || 'disponible',
+      volume: item.volume || (item.sizes && item.sizes[0] ? item.sizes[0].name : 'Estándar'),
+      price: item.price || (item.sizes && item.sizes[0] ? item.sizes[0].price : 0),
+      image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
+      sizes: item.sizes || []
+    }));
+
+    showToast(`¡${perfumes.length} fragancias cargadas con éxito!`, 'success');
   } catch (err) {
     console.error("Excepción:", err);
     showToast('Error de conexión', 'error');
