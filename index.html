@@ -301,7 +301,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
   <div class="bg-cardBg border border-gold/40 rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl relative text-center">
     <button onclick="closeWhatsAppConfigModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
     <h3 class="font-cinzel font-bold text-lg text-white mb-2">Número de WhatsApp</h3>
-    <input type="text" id="whatsapp-num-input" placeholder="Ej. 50499887766" required class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py.5 text-sm text-white mb-4">
+    <input type="text" id="whatsapp-num-input" placeholder="Ej. 50499887766" required class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py-2.5 text-sm text-white mb-4">
     <button onclick="saveWhatsAppNumber(event)" class="w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl text-sm">Guardar Número</button>
   </div>
 </div>
@@ -351,11 +351,11 @@ async function loadFromSupabase() {
   grid.innerHTML = '';
 
   try {
-    // Consulta directa y limpia en un solo bloque rápido de hasta 1000 registros
+    // Consulta ultraligera y segura usando un rango inicial de 0 a 100 para evitar timeout en Supabase
     let { data, error } = await _supabase
       .from('perfumes')
       .select('id, name, brand, status, volume, price, image, sizes')
-      .limit(1000);
+      .range(0, 99);
     
     if (error) {
       console.error("Error Supabase:", error);
@@ -670,7 +670,7 @@ function openProductModal(id = null) {
         document.getElementById('prod-t2-img').value = sizes[1].image || '';
       }
       if (sizes[2]) {
-        document.getElementById('prod-t3-name').value = sizes[2].name;
+        document.getElementById('prod-t3-name').value = sizes[3].name;
         document.getElementById('prod-t3-price').value = sizes[2].price;
         document.getElementById('prod-t3-img').value = sizes[2].image || '';
       }
