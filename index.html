@@ -208,18 +208,27 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
         <label class="block text-xs font-medium text-gray-400 mb-1">Nombre del Perfume *</label>
         <input type="text" id="prod-name" required class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py-2.5 text-sm text-white">
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label class="block text-xs font-medium text-gray-400 mb-1">Marca *</label>
           <input type="text" id="prod-brand" list="brands-datalist" required class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py-2.5 text-sm text-white">
           <datalist id="brands-datalist"></datalist>
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-400 mb-1">Estado del Producto *</label>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Estado *</label>
           <select id="prod-status" class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gold">
             <option value="disponible">Disponible</option>
             <option value="agotado">Agotado</option>
             <option value="proximamente">Próximamente</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Insignia (Opción 4)</label>
+          <select id="prod-badge" class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py-2.5 text-sm text-gold focus:outline-none focus:border-gold">
+            <option value="">Ninguna</option>
+            <option value="🔥 Más Vendido">🔥 Más Vendido</option>
+            <option value="✨ Novedad">✨ Novedad</option>
+            <option value="💎 Exclusivo">💎 Exclusivo</option>
           </select>
         </div>
       </div>
@@ -241,7 +250,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
           </div>
           <div>
             <label class="block text-[10px] text-gray-400 mb-1">Foto específica Tamaño 1 (Opcional)</label>
-            <input type="file" id="prod-t1-file" accept="image/*" onchange="previewSizeImage(event, 1)" class="w-full text-[10px] text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded file:bg-gold file:text-black">
+            <input type="file" id="prod-t1-file" accept="image/*" onchange="compressAndPreview(event, 'prod-t1-img')" class="w-full text-[10px] text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded file:bg-gold file:text-black">
             <input type="hidden" id="prod-t1-img">
           </div>
         </div>
@@ -260,7 +269,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
           </div>
           <div>
             <label class="block text-[10px] text-gray-400 mb-1">Foto específica Tamaño 2 (Opcional)</label>
-            <input type="file" id="prod-t2-file" accept="image/*" onchange="previewSizeImage(event, 2)" class="w-full text-[10px] text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded file:bg-gold file:text-black">
+            <input type="file" id="prod-t2-file" accept="image/*" onchange="compressAndPreview(event, 'prod-t2-img')" class="w-full text-[10px] text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded file:bg-gold file:text-black">
             <input type="hidden" id="prod-t2-img">
           </div>
         </div>
@@ -279,15 +288,15 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
           </div>
           <div>
             <label class="block text-[10px] text-gray-400 mb-1">Foto específica Tamaño 3 (Opcional)</label>
-            <input type="file" id="prod-t3-file" accept="image/*" onchange="previewSizeImage(event, 3)" class="w-full text-[10px] text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded file:bg-gold file:text-black">
+            <input type="file" id="prod-t3-file" accept="image/*" onchange="compressAndPreview(event, 'prod-t3-img')" class="w-full text-[10px] text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded file:bg-gold file:text-black">
             <input type="hidden" id="prod-t3-img">
           </div>
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-400 mb-1">Fotografía Principal / General</label>
-        <input type="file" id="prod-img-file" accept="image/*" onchange="previewLocalImage(event)" class="w-full text-xs text-gray-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:bg-gold file:text-black">
+        <label class="block text-xs font-medium text-gray-400 mb-1">Fotografía Principal / General (Optimizada Automáticamente)</label>
+        <input type="file" id="prod-img-file" accept="image/*" onchange="compressAndPreview(event, 'prod-img-base64')" class="w-full text-xs text-gray-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:bg-gold file:text-black">
         <input type="hidden" id="prod-img-base64">
       </div>
 
@@ -353,7 +362,7 @@ async function loadFromSupabase() {
   try {
     let { data, error } = await _supabase
       .from('perfumes')
-      .select('id, name, brand, status, volume, price, image, sizes')
+      .select('id, name, brand, status, volume, price, image, sizes, badge')
       .limit(50);
     
     if (error) {
@@ -380,6 +389,7 @@ async function loadFromSupabase() {
           name: item.name || 'Sin nombre',
           brand: item.brand || 'Línea Pura',
           status: item.status || 'disponible',
+          badge: item.badge || '',
           volume: item.volume || (parsedSizes[0] ? parsedSizes[0].name : 'Estándar'),
           price: item.price || (parsedSizes[0] ? parsedSizes[0].price : 0),
           image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
@@ -510,6 +520,12 @@ function renderProducts() {
     const initialPrice = sizes.length > 0 ? sizes[0].price : (p.price || 0);
     const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : (p.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume');
 
+    // Insignia personalizada (Opción 4)
+    let customBadgeHTML = '';
+    if (p.badge) {
+      customBadgeHTML = `<div class="absolute top-3 right-3 z-10 bg-gold/90 text-black font-bold border border-gold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider shadow-md">${p.badge}</div>`;
+    }
+
     let actionButton = `
       <div class="space-y-2">
         ${sizes.length > 0 ? `
@@ -536,9 +552,10 @@ function renderProducts() {
         <div class="absolute top-3 left-3 z-10 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30">
           <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${p.brand || 'Línea Pura'}</span>
         </div>
+        ${customBadgeHTML}
         ${statusBadge}
         ${isAdmin ? `
-          <div class="absolute top-3 right-3 z-10 flex space-x-1.5">
+          <div class="absolute top-12 right-3 z-10 flex space-x-1.5 mt-1">
             <button onclick="openEditProductModal('${p.id}')" title="Editar" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
             <button onclick="deleteFromSupabase('${p.id}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
           </div>
@@ -642,6 +659,7 @@ function openProductModal(id = null) {
   document.getElementById('prod-name').value = '';
   document.getElementById('prod-brand').value = '';
   document.getElementById('prod-status').value = 'disponible';
+  document.getElementById('prod-badge').value = '';
 
   document.getElementById('prod-t1-name').value = '';
   document.getElementById('prod-t1-price').value = '';
@@ -670,6 +688,7 @@ function openProductModal(id = null) {
       document.getElementById('prod-name').value = p.name;
       document.getElementById('prod-brand').value = p.brand;
       document.getElementById('prod-status').value = p.status || 'disponible';
+      document.getElementById('prod-badge').value = p.badge || '';
       document.getElementById('prod-img-base64').value = p.image;
 
       const sizes = p.sizes || [];
@@ -696,22 +715,39 @@ function openProductModal(id = null) {
 function openEditProductModal(id) { openProductModal(id); }
 function closeProductModal() { document.getElementById('product-modal').classList.add('hidden'); }
 
-function previewLocalImage(event) {
+// Compresión automática de imágenes (Opción 3)
+function compressAndPreview(event, targetInputId) {
   const file = event.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function(e) { document.getElementById('prod-img-base64').value = e.target.result; };
-    reader.readAsDataURL(file);
-  }
-}
+  if (!file) return;
 
-function previewSizeImage(event, sizeNum) {
-  const file = event.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function(e) { document.getElementById(`prod-t${sizeNum}-img`).value = e.target.result; };
-    reader.readAsDataURL(file);
-  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.src = e.target.result;
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 500;
+      const MAX_HEIGHT = 500;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+      } else {
+        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Comprimir a JPEG con calidad 0.7 para reducir el peso drásticamente
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById(targetInputId).value = compressedDataUrl;
+    };
+  };
+  reader.readAsDataURL(file);
 }
 
 function saveProduct(event) {
@@ -720,6 +756,7 @@ function saveProduct(event) {
   const name = document.getElementById('prod-name').value.trim();
   const brand = document.getElementById('prod-brand').value.trim();
   const status = document.getElementById('prod-status').value;
+  const badge = document.getElementById('prod-badge').value;
   let mainImage = document.getElementById('prod-img-base64').value;
 
   const targetId = editId ? editId : 'p_' + Date.now();
@@ -758,6 +795,7 @@ function saveProduct(event) {
     volume: sizes[0].name,
     price: sizes[0].price,
     status,
+    badge,
     image: mainImage,
     sizes
   };
