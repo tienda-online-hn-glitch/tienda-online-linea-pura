@@ -702,7 +702,7 @@ function openProductModal(id = null) {
         document.getElementById('prod-t2-img').value = sizes[1].image || '';
       }
       if (sizes[2]) {
-        document.getElementById('prod-t3-name').value = sizes[2].name;
+        document.getElementById('prod-t3-name').value = sizes[3].name;
         document.getElementById('prod-t3-price').value = sizes[2].price;
         document.getElementById('prod-t3-img').value = sizes[2].image || '';
       }
@@ -792,6 +792,7 @@ function saveProduct(event) {
     volume: sizes[0].name,
     price: sizes[0].price,
     status,
+    badge,
     image: mainImage,
     sizes
   };
