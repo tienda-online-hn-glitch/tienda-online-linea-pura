@@ -384,9 +384,9 @@ async function loadFromSupabase() {
           parsedSizes = [{ name: item.volume, price: item.price, image: item.image }];
         }
 
-        // Recuperar insignia si está guardada dentro del objeto sizes o volumes temporalmente sin alterar la BD
+        // Leer la insignia guardada de forma segura dentro del objeto sizes
         let itemBadge = '';
-        if (item.sizes && typeof item.sizes === 'object' && item.sizes.badge) {
+        if (item.sizes && typeof item.sizes === 'object' && !Array.isArray(item.sizes) && item.sizes.badge) {
           itemBadge = item.sizes.badge;
         }
 
@@ -421,7 +421,6 @@ async function loadFromSupabase() {
 
 async function saveToSupabase(product) {
   showToast('Guardando en la nube...', 'info');
-  // Se remueve 'badge' del objeto raíz para evitar error de columna en Supabase
   const dbData = {
     id: product.id,
     name: product.name,
@@ -802,7 +801,7 @@ function saveProduct(event) {
     return;
   }
 
-  // Guardar la insignia dentro del objeto sizes para que viaje de forma segura sin requerir una columna nueva en Supabase
+  // Adjuntar la insignia dentro del objeto sizes para guardarla sin alterar la estructura fija de la tabla en Supabase
   sizes.badge = badge;
 
   const productData = {
