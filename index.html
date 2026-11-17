@@ -313,7 +313,6 @@ let currentBrand = 'Todos';
 let adminPassword = 'Lineapura1010';
 let whatsappNumber = '50400000000';
 
-// Configuración de paginación por lotes para evitar sobrecarga
 let limiteMostrados = 12;
 const incrementoLote = 12;
 
@@ -446,7 +445,6 @@ function renderProducts() {
 
   emptyState.classList.add('hidden');
 
-  // Paginación: Cortar solo hasta el límite actual
   const paginatedItems = filtered.slice(0, limiteMostrados);
 
   grid.innerHTML = paginatedItems.map(p => {
@@ -508,7 +506,6 @@ function renderProducts() {
     `;
   }).join('');
 
-  // Mostrar u ocultar el botón "Cargar más"
   if (filtered.length > limiteMostrados) {
     loadMoreContainer.classList.remove('hidden');
   } else {
