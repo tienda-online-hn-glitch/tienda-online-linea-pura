@@ -123,6 +123,13 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
     </div>
   </div>
 
+  <!-- INDICADOR DE CARGA -->
+  <div id="loading-state" class="text-center py-24">
+    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-gold mb-4"></i>
+    <h3 class="font-cinzel text-xl text-gold tracking-widest uppercase">Cargando Fragancias...</h3>
+    <p class="text-gray-500 text-xs mt-1">Sincronizando con la nube de Línea Pura</p>
+  </div>
+
   <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
 
   <!-- Botón de Cargar Más -->
@@ -135,7 +142,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
   <div id="empty-state" class="hidden text-center py-20">
     <i class="fa-solid fa-bottle-droplet text-5xl text-gold/30 mb-4"></i>
     <h3 class="font-cinzel text-xl text-gray-300">No se encontraron perfumes</h3>
-    <p class="text-gray-500 text-sm mt-1">Prueba agregando uno desde el panel o verifica la conexión.</p>
+    <p class="text-gray-500 text-sm mt-1">Prueba agregando uno desde el panel de administrador.</p>
   </div>
 </main>
 
@@ -335,12 +342,19 @@ function loadCartAndSettings() {
 }
 
 async function loadFromSupabase() {
+  const loadingState = document.getElementById('loading-state');
+  const emptyState = document.getElementById('empty-state');
+  const grid = document.getElementById('products-grid');
+
+  // Mostrar indicador de carga y ocultar grilla mientras descarga
+  loadingState.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+  grid.innerHTML = '';
+
   try {
-    showToast('Cargando catálogo...', 'info');
-    // Usamos paginación en rango (0 a 19) para evitar el timeout de Supabase por exceso de datos
     let { data, error } = await _supabase
       .from('perfumes')
-      .select('id, name, brand, status, volume, price, image, sizes')
+      .select('*')
       .range(0, 49);
     
     if (error) {
@@ -350,21 +364,24 @@ async function loadFromSupabase() {
     } else {
       perfumes = (data || []).map(item => ({
         id: item.id || 'p_' + Math.random(),
-        name: item.name || 'Sin nombre',
-        brand: item.brand || 'Línea Pura',
+        name: item.name || item.nombre || 'Sin nombre',
+        brand: item.brand || item.marca || 'Línea Pura',
         status: item.status || 'disponible',
         volume: item.volume || (item.sizes && item.sizes[0] ? item.sizes[0].name : 'Estándar'),
         price: item.price || (item.sizes && item.sizes[0] ? item.sizes[0].price : 0),
-        image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
+        image: item.image || item.imagen || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
         sizes: item.sizes || []
       }));
-      showToast(`¡${perfumes.length} perfumes cargados!`, 'success');
     }
   } catch (err) {
     console.error("Excepción:", err);
     showToast('Error de conexión', 'error');
     perfumes = [];
   }
+
+  // Ocultar indicador de carga
+  loadingState.classList.add('hidden');
+
   limiteMostrados = 12;
   renderBrandFilters();
   renderProducts();
@@ -376,8 +393,8 @@ async function saveToSupabase(product) {
   showToast('Guardando en la nube...', 'info');
   const { error } = await _supabase.from('perfumes').upsert(product);
   if (!error) {
-    showToast('¡Guardado con éxito en la nube!', 'success');
-    loadFromSupabase();
+    showToast('¡Guardado con éxito!', 'success');
+    await loadFromSupabase(); // Recarga automática instantánea
   } else {
     showToast('Error al guardar: ' + error.message, 'error');
   }
@@ -389,7 +406,7 @@ async function deleteFromSupabase(id) {
   const { error } = await _supabase.from('perfumes').delete().eq('id', id);
   if (!error) {
     showToast('Eliminado correctamente', 'success');
-    loadFromSupabase();
+    await loadFromSupabase();
   } else {
     showToast('Error al eliminar', 'error');
   }
@@ -517,6 +534,9 @@ function renderProducts() {
         </div>
         <div class="p-5 flex-1 flex flex-col justify-between">
           <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-semibold text-emerald-400 tracking-wide bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-check mr-1"></i>100% ORIGINAL</span>
+            </div>
             <h4 class="font-cinzel text-base font-bold text-white mb-1 leading-snug">${p.name}</h4>
             <div id="price-display-${p.id}" class="font-cinzel text-lg font-bold text-gold mb-4">L. ${parseFloat(initialPrice).toFixed(2)}</div>
           </div>
