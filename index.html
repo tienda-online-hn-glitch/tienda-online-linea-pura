@@ -223,7 +223,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
           </select>
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-400 mb-1">Insignia (Opción 4)</label>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Insignia</label>
           <select id="prod-badge" class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py-2.5 text-sm text-gold focus:outline-none focus:border-gold">
             <option value="">Ninguna</option>
             <option value="🔥 Más Vendido">🔥 Más Vendido</option>
@@ -362,7 +362,7 @@ async function loadFromSupabase() {
   try {
     let { data, error } = await _supabase
       .from('perfumes')
-      .select('id, name, brand, status, volume, price, image, sizes, badge')
+      .select('id, name, brand, status, volume, price, image, sizes')
       .limit(50);
     
     if (error) {
@@ -389,7 +389,7 @@ async function loadFromSupabase() {
           name: item.name || 'Sin nombre',
           brand: item.brand || 'Línea Pura',
           status: item.status || 'disponible',
-          badge: item.badge || '',
+          badge: '',
           volume: item.volume || (parsedSizes[0] ? parsedSizes[0].name : 'Estándar'),
           price: item.price || (parsedSizes[0] ? parsedSizes[0].price : 0),
           image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
@@ -520,7 +520,6 @@ function renderProducts() {
     const initialPrice = sizes.length > 0 ? sizes[0].price : (p.price || 0);
     const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : (p.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume');
 
-    // Insignia personalizada (Opción 4)
     let customBadgeHTML = '';
     if (p.badge) {
       customBadgeHTML = `<div class="absolute top-3 right-3 z-10 bg-gold/90 text-black font-bold border border-gold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider shadow-md">${p.badge}</div>`;
@@ -715,7 +714,6 @@ function openProductModal(id = null) {
 function openEditProductModal(id) { openProductModal(id); }
 function closeProductModal() { document.getElementById('product-modal').classList.add('hidden'); }
 
-// Compresión automática de imágenes (Opción 3)
 function compressAndPreview(event, targetInputId) {
   const file = event.target.files[0];
   if (!file) return;
@@ -742,7 +740,6 @@ function compressAndPreview(event, targetInputId) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Comprimir a JPEG con calidad 0.7 para reducir el peso drásticamente
       const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
       document.getElementById(targetInputId).value = compressedDataUrl;
     };
@@ -795,7 +792,6 @@ function saveProduct(event) {
     volume: sizes[0].name,
     price: sizes[0].price,
     status,
-    badge,
     image: mainImage,
     sizes
   };
