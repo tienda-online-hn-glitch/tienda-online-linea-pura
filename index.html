@@ -363,7 +363,7 @@ async function loadFromSupabase() {
     let { data, error } = await _supabase
       .from('perfumes')
       .select('id, name, brand, status, volume, price, image, sizes')
-      .limit(50);
+      .limit(200); // <-- Límite actualizado a 200 para mostrar todos tus perfumes
     
     if (error) {
       console.error("Error Supabase:", error);
@@ -434,7 +434,7 @@ async function saveToSupabase(product) {
   showToast('Guardando en la nube...', 'info');
   const dbData = {
     id: product.id,
-    name: product.name, // Se guarda con la insignia incluida en el texto del nombre de forma limpia
+    name: product.name,
     brand: product.brand,
     status: product.status,
     volume: product.volume,
@@ -711,7 +711,7 @@ function openProductModal(id = null) {
     const p = perfumes.find(i => i.id === id);
     if (p) {
       document.getElementById('edit-product-id').value = p.id;
-      document.getElementById('prod-name').value = p.name; // Muestra el nombre limpio sin insignia en el input
+      document.getElementById('prod-name').value = p.name;
       document.getElementById('prod-brand').value = p.brand;
       document.getElementById('prod-status').value = p.status || 'disponible';
       document.getElementById('prod-badge').value = p.badge || '';
@@ -783,7 +783,6 @@ function saveProduct(event) {
   const badge = document.getElementById('prod-badge').value;
   let mainImage = document.getElementById('prod-img-base64').value;
 
-  // Integrar la insignia de forma segura en el nombre para que Supabase la guarde perfectamente en la nube para todos
   if (badge) {
     name = `${name} [${badge}]`;
   }
