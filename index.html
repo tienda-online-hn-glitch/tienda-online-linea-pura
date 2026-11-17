@@ -114,7 +114,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
       <button onclick="openWhatsAppConfigModal()" class="px-4 py-2 bg-inputBg border border-gold/40 text-gold hover:bg-gold/10 rounded-lg text-sm transition flex items-center space-x-2">
         <i class="fa-brands fa-whatsapp"></i><span>Configurar WhatsApp</span>
       </button>
-      <button onclick="loadFromSupabase()" class="px-4 py-2 bg-inputBg border border-gold text-gold hover:bg-gold/20 rounded-lg text-sm transition flex items-center space-x-2">
+      <button onclick="reiniciarYRecargar()" class="px-4 py-2 bg-inputBg border border-gold text-gold hover:bg-gold/20 rounded-lg text-sm transition flex items-center space-x-2">
         <i class="fa-solid fa-rotate"></i><span>Actualizar Catálogo</span>
       </button>
       <button onclick="logoutAdmin()" class="px-4 py-2 bg-inputBg border border-gold/30 text-gray-300 hover:text-white rounded-lg text-sm transition">
@@ -329,12 +329,13 @@ let currentBrand = 'Todos';
 let adminPassword = 'Lineapura1010';
 let whatsappNumber = '50433185377';
 
-let limiteMostrados = 12;
-const incrementoLote = 12;
+let paginaActual = 0;
+const tamanoPagina = 16; // Cantidad de perfumes que trae por cada bloque
+let hayMasRegistros = true;
 
 window.onload = function() {
   loadCartAndSettings();
-  loadFromSupabase();
+  loadFromSupabase(true);
 };
 
 function loadCartAndSettings() {
@@ -350,28 +351,39 @@ function loadCartAndSettings() {
   isAdmin = false;
 }
 
-async function loadFromSupabase() {
+async function reiniciarYRecargar() {
+  paginaActual = 0;
+  perfumes = [];
+  hayMasRegistros = true;
+  await loadFromSupabase(true);
+}
+
+async function loadFromSupabase(reset = false) {
   const loadingState = document.getElementById('loading-state');
   const emptyState = document.getElementById('empty-state');
-  const grid = document.getElementById('products-grid');
-
-  loadingState.classList.remove('hidden');
-  emptyState.classList.add('hidden');
-  grid.innerHTML = '';
+  
+  if (reset) {
+    loadingState.classList.remove('hidden');
+    emptyState.classList.add('hidden');
+    document.getElementById('products-grid').innerHTML = '';
+  }
 
   try {
+    const inicio = paginaActual * tamanoPagina;
+    const fin = inicio + tamanoPagina - 1;
+
+    // Consulta paginada real desde Supabase por bloques ultraligeros
     let { data, error } = await _supabase
       .from('perfumes')
       .select('id, name, brand, status, volume, price, image, sizes')
       .order('id', { ascending: false })
-      .limit(60);
+      .range(inicio, fin);
     
     if (error) {
       console.error("Error Supabase:", error);
       showToast('Error: ' + error.message, 'error');
-      perfumes = [];
     } else {
-      perfumes = (data || []).map(item => {
+      const nuevosItems = (data || []).map(item => {
         let parsedSizes = [];
         try {
           if (typeof item.sizes === 'string') {
@@ -413,21 +425,34 @@ async function loadFromSupabase() {
           sizes: parsedSizes
         };
       });
-      showToast(`¡${perfumes.length} fragancias cargadas con éxito!`, 'success');
+
+      if (nuevosItems.length < tamanoPagina) {
+        hayMasRegistros = false;
+      }
+
+      if (reset) {
+        perfumes = nuevosItems;
+      } else {
+        perfumes = [...perfumes, ...nuevosItems];
+      }
+
+      showToast(`¡Catálogo sincronizado!`, 'success');
     }
   } catch (err) {
     console.error("Excepción:", err);
     showToast('Error de conexión', 'error');
-    perfumes = [];
   }
 
   loadingState.classList.add('hidden');
-
-  limiteMostrados = 12;
   renderBrandFilters();
   renderProducts();
   updateCartUI();
   updateBrandsDatalist();
+}
+
+async function cargarMasPerfumes() {
+  paginaActual++;
+  await loadFromSupabase(false);
 }
 
 async function saveToSupabase(product) {
@@ -445,7 +470,7 @@ async function saveToSupabase(product) {
   const { error } = await _supabase.from('perfumes').upsert(dbData);
   if (!error) {
     showToast('¡Guardado con éxito!', 'success');
-    await loadFromSupabase();
+    await reiniciarYRecargar();
   } else {
     showToast('Error al guardar: ' + error.message, 'error');
   }
@@ -457,7 +482,7 @@ async function deleteFromSupabase(id) {
   const { error } = await _supabase.from('perfumes').delete().eq('id', id);
   if (!error) {
     showToast('Eliminado correctamente', 'success');
-    await loadFromSupabase();
+    await reiniciarYRecargar();
   } else {
     showToast('Error al eliminar', 'error');
   }
@@ -482,7 +507,6 @@ function renderBrandFilters() {
 
 function setBrand(brand) {
   currentBrand = brand;
-  limiteMostrados = 12;
   renderBrandFilters();
   renderProducts();
 }
@@ -524,7 +548,7 @@ function renderProducts() {
     return matchesBrand && matchesSearch;
   });
 
-  if (filtered.length === 0) {
+  if (filtered.length === 0 && perfumes.length === 0) {
     grid.innerHTML = '';
     loadMoreContainer.classList.add('hidden');
     emptyState.classList.remove('hidden');
@@ -533,9 +557,7 @@ function renderProducts() {
 
   emptyState.classList.add('hidden');
 
-  const paginatedItems = filtered.slice(0, limiteMostrados);
-
-  grid.innerHTML = paginatedItems.map(p => {
+  grid.innerHTML = filtered.map(p => {
     const status = p.status || 'disponible';
     let statusBadge = '';
 
@@ -603,27 +625,20 @@ function renderProducts() {
     `;
   }).join('');
 
-  if (filtered.length > limiteMostrados) {
+  if (hayMasRegistros && currentBrand === 'Todos' && searchQuery === '') {
     loadMoreContainer.classList.remove('hidden');
   } else {
     loadMoreContainer.classList.add('hidden');
   }
 }
 
-function cargarMasPerfumes() {
-  limiteMostrados += incrementoLote;
-  renderProducts();
-}
-
 function filterProducts() {
   document.getElementById('search-input-mobile').value = document.getElementById('search-input').value;
-  limiteMostrados = 12;
   renderProducts();
 }
 
 function filterProductsMobile() {
   document.getElementById('search-input').value = document.getElementById('search-input-mobile').value;
-  limiteMostrados = 12;
   renderProducts();
 }
 
