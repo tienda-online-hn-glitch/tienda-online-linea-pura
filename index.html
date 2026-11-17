@@ -351,11 +351,12 @@ async function loadFromSupabase() {
   grid.innerHTML = '';
 
   try {
-    // Consulta ultraligera y segura usando un rango inicial de 0 a 100 para evitar timeout en Supabase
+    // Carga ultrasegura en lotes iniciales para evitar timeout por exceso de peso de imágenes
     let { data, error } = await _supabase
       .from('perfumes')
       .select('id, name, brand, status, volume, price, image, sizes')
-      .range(0, 99);
+      .order('id', { ascending: true })
+      .limit(100);
     
     if (error) {
       console.error("Error Supabase:", error);
@@ -670,7 +671,7 @@ function openProductModal(id = null) {
         document.getElementById('prod-t2-img').value = sizes[1].image || '';
       }
       if (sizes[2]) {
-        document.getElementById('prod-t3-name').value = sizes[3].name;
+        document.getElementById('prod-t3-name').value = sizes[2].name;
         document.getElementById('prod-t3-price').value = sizes[2].price;
         document.getElementById('prod-t3-img').value = sizes[2].image || '';
       }
