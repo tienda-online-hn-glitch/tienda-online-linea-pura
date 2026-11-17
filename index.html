@@ -336,20 +336,22 @@ function loadCartAndSettings() {
 
 async function loadFromSupabase() {
   try {
-    showToast('Conectando a Supabase...', 'info');
-    let { data, error } = await _supabase.from('perfumes').select('*');
+    showToast('Cargando catálogo...', 'info');
+    // Usamos paginación en rango (0 a 19) para evitar el timeout de Supabase por exceso de datos
+    let { data, error } = await _supabase
+      .from('perfumes')
+      .select('id, name, brand, status, volume, price, image, sizes')
+      .range(0, 49);
     
     if (error) {
       console.error("Error Supabase:", error);
       showToast('Error: ' + error.message, 'error');
       perfumes = [];
     } else {
-      console.log("Datos recibidos de Supabase:", data);
-      // Mapeo flexible para asegurar que lea 'name', 'brand', 'price', 'image' sin importar cómo estén en la BD
       perfumes = (data || []).map(item => ({
-        id: item.id || item.identificación || 'p_' + Math.random(),
-        name: item.name || item.nombre || 'Sin nombre',
-        brand: item.brand || item.marca || 'Línea Pura',
+        id: item.id || 'p_' + Math.random(),
+        name: item.name || 'Sin nombre',
+        brand: item.brand || 'Línea Pura',
         status: item.status || 'disponible',
         volume: item.volume || (item.sizes && item.sizes[0] ? item.sizes[0].name : 'Estándar'),
         price: item.price || (item.sizes && item.sizes[0] ? item.sizes[0].price : 0),
