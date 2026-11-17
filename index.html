@@ -125,7 +125,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
 
   <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
 
-  <!-- Botón de Cargar Más (Paginación) -->
+  <!-- Botón de Cargar Más -->
   <div id="load-more-container" class="mt-12 text-center hidden">
     <button onclick="cargarMasPerfumes()" class="px-8 py-3 bg-cardBg border border-gold text-gold hover:bg-gold hover:text-black font-semibold rounded-xl text-sm transition shadow-lg">
       <i class="fa-solid fa-angles-down mr-2"></i>Cargar más fragancias
@@ -135,7 +135,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
   <div id="empty-state" class="hidden text-center py-20">
     <i class="fa-solid fa-bottle-droplet text-5xl text-gold/30 mb-4"></i>
     <h3 class="font-cinzel text-xl text-gray-300">No se encontraron perfumes</h3>
-    <p class="text-gray-500 text-sm mt-1">Prueba agregando uno desde el panel de administrador haciendo clic en el logo superior.</p>
+    <p class="text-gray-500 text-sm mt-1">Prueba agregando uno desde el panel o verifica la conexión.</p>
   </div>
 </main>
 
@@ -336,19 +336,31 @@ function loadCartAndSettings() {
 
 async function loadFromSupabase() {
   try {
-    showToast('Cargando catálogo...', 'info');
-    // Consulta limpia sin filtros estrictos de orden que puedan fallar si hay datos nulos
+    showToast('Conectando a Supabase...', 'info');
     let { data, error } = await _supabase.from('perfumes').select('*');
     
     if (error) {
-      console.error("Error de Supabase:", error);
-      showToast('Error al conectar con la base de datos', 'error');
+      console.error("Error Supabase:", error);
+      showToast('Error: ' + error.message, 'error');
       perfumes = [];
     } else {
-      perfumes = data || [];
+      console.log("Datos recibidos de Supabase:", data);
+      // Mapeo flexible para asegurar que lea 'name', 'brand', 'price', 'image' sin importar cómo estén en la BD
+      perfumes = (data || []).map(item => ({
+        id: item.id || item.identificación || 'p_' + Math.random(),
+        name: item.name || item.nombre || 'Sin nombre',
+        brand: item.brand || item.marca || 'Línea Pura',
+        status: item.status || 'disponible',
+        volume: item.volume || (item.sizes && item.sizes[0] ? item.sizes[0].name : 'Estándar'),
+        price: item.price || (item.sizes && item.sizes[0] ? item.sizes[0].price : 0),
+        image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
+        sizes: item.sizes || []
+      }));
+      showToast(`¡${perfumes.length} perfumes cargados!`, 'success');
     }
   } catch (err) {
     console.error("Excepción:", err);
+    showToast('Error de conexión', 'error');
     perfumes = [];
   }
   limiteMostrados = 12;
@@ -365,7 +377,7 @@ async function saveToSupabase(product) {
     showToast('¡Guardado con éxito en la nube!', 'success');
     loadFromSupabase();
   } else {
-    showToast('Error al guardar en la nube', 'error');
+    showToast('Error al guardar: ' + error.message, 'error');
   }
 }
 
@@ -462,12 +474,12 @@ function renderProducts() {
       sizes = [{ name: p.volume, price: p.price, image: p.image }];
     }
 
-    const initialPrice = sizes.length > 0 ? sizes[0].price : 0;
-    const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : p.image;
+    const initialPrice = sizes.length > 0 ? sizes[0].price : (p.price || 0);
+    const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : (p.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume');
 
     let actionButton = `
       <div class="space-y-2">
-        ${sizes.length > 0 ? `
+        ${sizes.length > 1 ? `
           <select id="size-select-${p.id}" onchange="updateCardSelection('${p.id}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold">
             ${sizes.map((s, idx) => `<option value="${s.name}" data-price="${s.price}" data-img="${s.image || ''}" ${idx === 0 ? 'selected' : ''}>${s.name} - L. ${parseFloat(s.price).toFixed(2)}</option>`).join('')}
           </select>
@@ -499,12 +511,12 @@ function renderProducts() {
           </div>
         ` : ''}
         <div class="relative h-64 overflow-hidden bg-inputBg flex items-center justify-center p-4">
-          <img id="img-display-${p.id}" src="${initialImage || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume'}" alt="${p.name}" loading="lazy" class="w-full h-full object-cover rounded-xl group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">
+          <img id="img-display-${p.id}" src="${initialImage}" alt="${p.name}" loading="lazy" class="w-full h-full object-cover rounded-xl group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">
         </div>
         <div class="p-5 flex-1 flex flex-col justify-between">
           <div>
             <h4 class="font-cinzel text-base font-bold text-white mb-1 leading-snug">${p.name}</h4>
-            <div id="price-display-${p.id}" class="font-cinzel text-lg font-bold text-gold mb-4">L. ${parseFloat(initialPrice || 0).toFixed(2)}</div>
+            <div id="price-display-${p.id}" class="font-cinzel text-lg font-bold text-gold mb-4">L. ${parseFloat(initialPrice).toFixed(2)}</div>
           </div>
           <div>${actionButton}</div>
         </div>
@@ -636,7 +648,7 @@ function openProductModal(id = null) {
         document.getElementById('prod-t2-img').value = sizes[1].image || '';
       }
       if (sizes[2]) {
-        document.getElementById('prod-t3-name').value = sizes[3].name;
+        document.getElementById('prod-t3-name').value = sizes[2].name;
         document.getElementById('prod-t3-price').value = sizes[2].price;
         document.getElementById('prod-t3-img').value = sizes[2].image || '';
       }
