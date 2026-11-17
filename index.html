@@ -327,7 +327,7 @@ let cart = [];
 let isAdmin = false;
 let currentBrand = 'Todos';
 let adminPassword = 'Lineapura1010';
-let whatsappNumber = '50433185377'; // <--- Número de WhatsApp fijo configurado aquí
+let whatsappNumber = '50433185377';
 
 let limiteMostrados = 12;
 const incrementoLote = 12;
@@ -384,12 +384,18 @@ async function loadFromSupabase() {
           parsedSizes = [{ name: item.volume, price: item.price, image: item.image }];
         }
 
+        // Recuperar insignia si está guardada dentro del objeto sizes o volumes temporalmente sin alterar la BD
+        let itemBadge = '';
+        if (item.sizes && typeof item.sizes === 'object' && item.sizes.badge) {
+          itemBadge = item.sizes.badge;
+        }
+
         return {
           id: item.id || 'p_' + Math.random(),
           name: item.name || 'Sin nombre',
           brand: item.brand || 'Línea Pura',
           status: item.status || 'disponible',
-          badge: '',
+          badge: itemBadge,
           volume: item.volume || (parsedSizes[0] ? parsedSizes[0].name : 'Estándar'),
           price: item.price || (parsedSizes[0] ? parsedSizes[0].price : 0),
           image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
@@ -415,7 +421,18 @@ async function loadFromSupabase() {
 
 async function saveToSupabase(product) {
   showToast('Guardando en la nube...', 'info');
-  const { error } = await _supabase.from('perfumes').upsert(product);
+  // Se remueve 'badge' del objeto raíz para evitar error de columna en Supabase
+  const dbData = {
+    id: product.id,
+    name: product.name,
+    brand: product.brand,
+    status: product.status,
+    volume: product.volume,
+    price: product.price,
+    image: product.image,
+    sizes: product.sizes
+  };
+  const { error } = await _supabase.from('perfumes').upsert(dbData);
   if (!error) {
     showToast('¡Guardado con éxito!', 'success');
     await loadFromSupabase();
@@ -785,6 +802,9 @@ function saveProduct(event) {
     return;
   }
 
+  // Guardar la insignia dentro del objeto sizes para que viaje de forma segura sin requerir una columna nueva en Supabase
+  sizes.badge = badge;
+
   const productData = {
     id: targetId,
     name,
@@ -792,7 +812,6 @@ function saveProduct(event) {
     volume: sizes[0].name,
     price: sizes[0].price,
     status,
-    badge,
     image: mainImage,
     sizes
   };
