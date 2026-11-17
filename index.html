@@ -351,10 +351,10 @@ async function loadFromSupabase() {
   grid.innerHTML = '';
 
   try {
-    // Consulta optimizada para traer TODOS tus perfumes (hasta 1000 registros completos) sin timeout
+    // Usamos exactamente los nombres de columnas correctos en inglés de tu base de datos de Supabase
     let { data, error } = await _supabase
       .from('perfumes')
-      .select('id, name, nombre, brand, marca, status, volume, price, image, imagen, sizes')
+      .select('id, name, brand, status, volume, price, image, sizes')
       .range(0, 999);
     
     if (error) {
@@ -364,12 +364,12 @@ async function loadFromSupabase() {
     } else {
       perfumes = (data || []).map(item => ({
         id: item.id || 'p_' + Math.random(),
-        name: item.name || item.nombre || 'Sin nombre',
-        brand: item.brand || item.marca || 'Línea Pura',
+        name: item.name || 'Sin nombre',
+        brand: item.brand || 'Línea Pura',
         status: item.status || 'disponible',
         volume: item.volume || (item.sizes && item.sizes[0] ? item.sizes[0].name : 'Estándar'),
         price: item.price || (item.sizes && item.sizes[0] ? item.sizes[0].price : 0),
-        image: item.image || item.imagen || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
+        image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
         sizes: item.sizes || []
       }));
     }
