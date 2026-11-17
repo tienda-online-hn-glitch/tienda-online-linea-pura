@@ -327,10 +327,12 @@ let cart = [];
 let isAdmin = false;
 let currentBrand = 'Todos';
 let adminPassword = 'Lineapura1010';
-let whatsappNumber = '50433185377';
+
+// Lee el número guardado en el navegador o usa el tuyo predeterminado
+let whatsappNumber = localStorage.getItem('linea_pura_whatsapp') || '50433185377';
 
 let paginaActual = 0;
-const tamanoPagina = 16; // Cantidad de perfumes que trae por cada bloque
+const tamanoPagina = 16; 
 let hayMasRegistros = true;
 
 window.onload = function() {
@@ -372,7 +374,6 @@ async function loadFromSupabase(reset = false) {
     const inicio = paginaActual * tamanoPagina;
     const fin = inicio + tamanoPagina - 1;
 
-    // Consulta paginada real desde Supabase por bloques ultraligeros
     let { data, error } = await _supabase
       .from('perfumes')
       .select('id, name, brand, status, volume, price, image, sizes')
