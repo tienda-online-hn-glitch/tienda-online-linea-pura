@@ -363,7 +363,8 @@ async function loadFromSupabase() {
     let { data, error } = await _supabase
       .from('perfumes')
       .select('id, name, brand, status, volume, price, image, sizes')
-      .limit(200); // <-- Límite actualizado a 200 para mostrar todos tus perfumes
+      .order('id', { ascending: false })
+      .limit(60);
     
     if (error) {
       console.error("Error Supabase:", error);
@@ -388,7 +389,6 @@ async function loadFromSupabase() {
         let cleanName = rawName;
         let itemBadge = '';
 
-        // Detectar si la insignia está integrada en el nombre
         if (rawName.includes(' [🔥 Más Vendido]')) {
           cleanName = rawName.replace(' [🔥 Más Vendido]', '');
           itemBadge = '🔥 Más Vendido';
