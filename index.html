@@ -351,28 +351,41 @@ async function loadFromSupabase() {
   grid.innerHTML = '';
 
   try {
-    // Carga ultrasegura en lotes iniciales para evitar timeout por exceso de peso de imágenes
     let { data, error } = await _supabase
       .from('perfumes')
       .select('id, name, brand, status, volume, price, image, sizes')
-      .order('id', { ascending: true })
-      .limit(100);
+      .limit(50);
     
     if (error) {
       console.error("Error Supabase:", error);
       showToast('Error: ' + error.message, 'error');
       perfumes = [];
     } else {
-      perfumes = (data || []).map(item => ({
-        id: item.id || 'p_' + Math.random(),
-        name: item.name || 'Sin nombre',
-        brand: item.brand || 'Línea Pura',
-        status: item.status || 'disponible',
-        volume: item.volume || (item.sizes && item.sizes[0] ? item.sizes[0].name : 'Estándar'),
-        price: item.price || (item.sizes && item.sizes[0] ? item.sizes[0].price : 0),
-        image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
-        sizes: item.sizes || []
-      }));
+      perfumes = (data || []).map(item => {
+        let parsedSizes = [];
+        try {
+          if (typeof item.sizes === 'string') {
+            parsedSizes = JSON.parse(item.sizes);
+          } else if (Array.isArray(item.sizes)) {
+            parsedSizes = item.sizes;
+          }
+        } catch (e) { parsedSizes = []; }
+
+        if (parsedSizes.length === 0 && item.volume && item.price) {
+          parsedSizes = [{ name: item.volume, price: item.price, image: item.image }];
+        }
+
+        return {
+          id: item.id || 'p_' + Math.random(),
+          name: item.name || 'Sin nombre',
+          brand: item.brand || 'Línea Pura',
+          status: item.status || 'disponible',
+          volume: item.volume || (parsedSizes[0] ? parsedSizes[0].name : 'Estándar'),
+          price: item.price || (parsedSizes[0] ? parsedSizes[0].price : 0),
+          image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
+          sizes: parsedSizes
+        };
+      });
       showToast(`¡${perfumes.length} fragancias cargadas con éxito!`, 'success');
     }
   } catch (err) {
@@ -499,7 +512,7 @@ function renderProducts() {
 
     let actionButton = `
       <div class="space-y-2">
-        ${sizes.length > 1 ? `
+        ${sizes.length > 0 ? `
           <select id="size-select-${p.id}" onchange="updateCardSelection('${p.id}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold">
             ${sizes.map((s, idx) => `<option value="${s.name}" data-price="${s.price}" data-img="${s.image || ''}" ${idx === 0 ? 'selected' : ''}>${s.name} - L. ${parseFloat(s.price).toFixed(2)}</option>`).join('')}
           </select>
