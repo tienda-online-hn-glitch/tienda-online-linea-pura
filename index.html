@@ -301,7 +301,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
   <div class="bg-cardBg border border-gold/40 rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl relative text-center">
     <button onclick="closeWhatsAppConfigModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
     <h3 class="font-cinzel font-bold text-lg text-white mb-2">Número de WhatsApp</h3>
-    <input type="text" id="whatsapp-num-input" placeholder="Ej. 50499887766" required class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py-2.5 text-sm text-white mb-4">
+    <input type="text" id="whatsapp-num-input" placeholder="Ej. 50499887766" required class="w-full bg-inputBg border border-gold/30 rounded-xl px-4 py.5 text-sm text-white mb-4">
     <button onclick="saveWhatsAppNumber(event)" class="w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl text-sm">Guardar Número</button>
   </div>
 </div>
@@ -351,47 +351,29 @@ async function loadFromSupabase() {
   grid.innerHTML = '';
 
   try {
-    // CARGA POR PAGINACIÓN REAL EN BLOQUES DE 100 PARA EVITAR TIMEOUT DE SUPABASE
-    let allData = [];
-    let batchSize = 100;
-    let from = 0;
-    let keepFetching = true;
-
-    while (keepFetching) {
-      let { data, error } = await _supabase
-        .from('perfumes')
-        .select('id, name, brand, status, volume, price, image, sizes')
-        .range(from, from + batchSize - 1);
-
-      if (error) {
-        console.error("Error Supabase:", error);
-        break;
-      }
-
-      if (data && data.length > 0) {
-        allData = allData.concat(data);
-        if (data.length < batchSize) {
-          keepFetching = false;
-        } else {
-          from += batchSize;
-        }
-      } else {
-        keepFetching = false;
-      }
+    // Consulta directa y limpia en un solo bloque rápido de hasta 1000 registros
+    let { data, error } = await _supabase
+      .from('perfumes')
+      .select('id, name, brand, status, volume, price, image, sizes')
+      .limit(1000);
+    
+    if (error) {
+      console.error("Error Supabase:", error);
+      showToast('Error: ' + error.message, 'error');
+      perfumes = [];
+    } else {
+      perfumes = (data || []).map(item => ({
+        id: item.id || 'p_' + Math.random(),
+        name: item.name || 'Sin nombre',
+        brand: item.brand || 'Línea Pura',
+        status: item.status || 'disponible',
+        volume: item.volume || (item.sizes && item.sizes[0] ? item.sizes[0].name : 'Estándar'),
+        price: item.price || (item.sizes && item.sizes[0] ? item.sizes[0].price : 0),
+        image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
+        sizes: item.sizes || []
+      }));
+      showToast(`¡${perfumes.length} fragancias cargadas con éxito!`, 'success');
     }
-
-    perfumes = (allData || []).map(item => ({
-      id: item.id || 'p_' + Math.random(),
-      name: item.name || 'Sin nombre',
-      brand: item.brand || 'Línea Pura',
-      status: item.status || 'disponible',
-      volume: item.volume || (item.sizes && item.sizes[0] ? item.sizes[0].name : 'Estándar'),
-      price: item.price || (item.sizes && item.sizes[0] ? item.sizes[0].price : 0),
-      image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
-      sizes: item.sizes || []
-    }));
-
-    showToast(`¡${perfumes.length} fragancias cargadas con éxito!`, 'success');
   } catch (err) {
     console.error("Excepción:", err);
     showToast('Error de conexión', 'error');
