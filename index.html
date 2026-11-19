@@ -428,18 +428,14 @@ async function loadFromSupabase(reset = false) {
   }
 
   try {
-    let query = _supabase
+    const inicio = paginaActual * tamanoPagina;
+    const fin = inicio + tamanoPagina - 1;
+
+    let { data, error } = await _supabase
       .from('perfumes')
       .select('id, name, brand, status, volume, price, image, sizes')
-      .order('id', { ascending: false });
-
-    if (!reset) {
-      const inicio = paginaActual * tamanoPagina;
-      const fin = inicio + tamanoPagina - 1;
-      query = query.range(inicio, fin);
-    }
-
-    let { data, error } = await query;
+      .order('id', { ascending: false })
+      .range(inicio, fin);
     
     if (error) {
       console.error("Error Supabase:", error);
@@ -447,13 +443,13 @@ async function loadFromSupabase(reset = false) {
     } else {
       const nuevosItems = mapRawPerfumes(data);
 
+      if (nuevosItems.length < tamanoPagina) {
+        hayMasRegistros = false;
+      }
+
       if (reset) {
         perfumes = nuevosItems;
-        hayMasRegistros = false;
       } else {
-        if (nuevosItems.length < tamanoPagina) {
-          hayMasRegistros = false;
-        }
         perfumes = [...perfumes, ...nuevosItems];
       }
 
@@ -665,7 +661,10 @@ function renderProducts(forceRebuild = false) {
     }
   }
 
-  if (visibleCount === 0) {
+  if (visibleCount === 0 && perfumes.length === 0) {
+    loadMoreContainer.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+  } else if (visibleCount === 0) {
     loadMoreContainer.classList.add('hidden');
     emptyState.classList.remove('hidden');
   } else {
