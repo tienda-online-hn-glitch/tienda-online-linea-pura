@@ -323,11 +323,11 @@ const { createClient } = supabase;
 const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let perfumes = [];
-let allPerfumesCache = [];
 let cart = [];
 let isAdmin = false;
 let currentBrand = 'Todos';
 let adminPassword = 'Lineapura1010';
+let gridBuiltForData = false;
 
 // Lee el número guardado en el navegador o usa el tuyo predeterminado
 let whatsappNumber = localStorage.getItem('linea_pura_whatsapp') || '50433185377';
@@ -352,6 +352,10 @@ function loadCartAndSettings() {
   if (storedWa) { whatsappNumber = storedWa; }
 
   isAdmin = false;
+}
+
+function normalizeText(str) {
+  return String(str || '').replace(/\s+/g, ' ').trim();
 }
 
 function mapRawPerfumes(rows) {
@@ -384,11 +388,16 @@ function mapRawPerfumes(rows) {
       itemBadge = '💎 Exclusivo';
     }
 
+    const normBrand = normalizeText(item.brand) || 'Línea Pura';
+    const normName = normalizeText(cleanName);
+
     return {
       id: item.id || 'p_' + Math.random(),
-      name: cleanName,
+      name: normName,
       rawFullName: rawName,
-      brand: (item.brand || 'Línea Pura').trim(),
+      brand: normBrand,
+      brandLower: normBrand.toLowerCase(),
+      nameLower: normName.toLowerCase(),
       status: item.status || 'disponible',
       badge: itemBadge,
       volume: item.volume || (parsedSizes[0] ? parsedSizes[0].name : 'Estándar'),
@@ -399,23 +408,10 @@ function mapRawPerfumes(rows) {
   });
 }
 
-async function ensureFullCatalogLoaded() {
-  if (allPerfumesCache.length > 0 && !hayMasRegistros) return;
-  const { data, error } = await _supabase
-    .from('perfumes')
-    .select('id, name, brand, status, volume, price, image, sizes')
-    .order('id', { ascending: false });
-
-  if (!error && data) {
-    allPerfumesCache = mapRawPerfumes(data);
-    hayMasRegistros = false;
-  }
-}
-
 async function reiniciarYRecargar() {
   paginaActual = 0;
   perfumes = [];
-  allPerfumesCache = [];
+  gridBuiltForData = false;
   hayMasRegistros = true;
   await loadFromSupabase(true);
 }
@@ -428,17 +424,22 @@ async function loadFromSupabase(reset = false) {
     loadingState.classList.remove('hidden');
     emptyState.classList.add('hidden');
     document.getElementById('products-grid').innerHTML = '';
+    gridBuiltForData = false;
   }
 
   try {
-    const inicio = paginaActual * tamanoPagina;
-    const fin = inicio + tamanoPagina - 1;
-
-    let { data, error } = await _supabase
+    let query = _supabase
       .from('perfumes')
       .select('id, name, brand, status, volume, price, image, sizes')
-      .order('id', { ascending: false })
-      .range(inicio, fin);
+      .order('id', { ascending: false });
+
+    if (!reset) {
+      const inicio = paginaActual * tamanoPagina;
+      const fin = inicio + tamanoPagina - 1;
+      query = query.range(inicio, fin);
+    }
+
+    let { data, error } = await query;
     
     if (error) {
       console.error("Error Supabase:", error);
@@ -446,23 +447,17 @@ async function loadFromSupabase(reset = false) {
     } else {
       const nuevosItems = mapRawPerfumes(data);
 
-      if (nuevosItems.length < tamanoPagina) {
-        hayMasRegistros = false;
-      }
-
       if (reset) {
         perfumes = nuevosItems;
+        hayMasRegistros = false;
       } else {
+        if (nuevosItems.length < tamanoPagina) {
+          hayMasRegistros = false;
+        }
         perfumes = [...perfumes, ...nuevosItems];
       }
 
-      // Cargar catálogo completo en segundo plano para marcas y búsquedas sin perder registros
-      ensureFullCatalogLoaded().then(() => {
-        renderBrandFilters();
-        updateBrandsDatalist();
-        renderProducts();
-      });
-
+      gridBuiltForData = false;
       showToast(`¡Catálogo sincronizado!`, 'success');
     }
   } catch (err) {
@@ -472,7 +467,7 @@ async function loadFromSupabase(reset = false) {
 
   loadingState.classList.add('hidden');
   renderBrandFilters();
-  renderProducts();
+  renderProducts(true);
   updateCartUI();
   updateBrandsDatalist();
 }
@@ -515,13 +510,8 @@ async function deleteFromSupabase(id) {
   }
 }
 
-function getSourceCatalog() {
-  return allPerfumesCache.length > 0 ? allPerfumesCache : perfumes;
-}
-
 function getBrands() {
-  const source = getSourceCatalog();
-  const brandsSet = new Set(source.map(p => (p.brand || '').trim()).filter(b => b !== ''));
+  const brandsSet = new Set(perfumes.map(p => p.brand).filter(b => b !== ''));
   return ['Todos', ...Array.from(brandsSet).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))];
 }
 
@@ -532,7 +522,7 @@ function renderBrandFilters() {
   clearBtn.classList.toggle('hidden', currentBrand === 'Todos');
   container.innerHTML = brands.map(brand => {
     const encodedBrand = encodeURIComponent(brand);
-    const isActive = currentBrand.toLowerCase() === brand.toLowerCase();
+    const isActive = normalizeText(currentBrand).toLowerCase() === normalizeText(brand).toLowerCase();
     return `
       <button onclick="setBrand(decodeURIComponent('${encodedBrand}'))" class="whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition ${isActive ? 'gold-bg text-black font-semibold shadow-md' : 'bg-cardBg border border-gold/30 text-gray-300 hover:border-gold'}">
         ${brand}
@@ -541,19 +531,15 @@ function renderBrandFilters() {
   }).join('');
 }
 
-async function setBrand(brand) {
-  currentBrand = (brand || 'Todos').trim();
+function setBrand(brand) {
+  currentBrand = normalizeText(brand) || 'Todos';
   renderBrandFilters();
-  if (currentBrand !== 'Todos') {
-    await ensureFullCatalogLoaded();
-  }
-  renderProducts();
+  renderProducts(false);
 }
 
 function updateBrandsDatalist() {
   const datalist = document.getElementById('brands-datalist');
-  const source = getSourceCatalog();
-  const brands = Array.from(new Set(source.map(p => (p.brand || '').trim()).filter(b => b !== ''))).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  const brands = Array.from(new Set(perfumes.map(p => p.brand).filter(b => b !== ''))).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   datalist.innerHTML = brands.map(b => `<option value="${b}">`).join('');
 }
 
@@ -567,130 +553,139 @@ function updateCardSelection(productId, selectElement) {
   if (img && img !== 'null' && img !== '') {
     document.getElementById(`img-display-${productId}`).src = img;
   } else {
-    const product = getSourceCatalog().find(i => i.id === productId);
+    const product = perfumes.find(i => i.id === productId);
     if (product) {
       document.getElementById(`img-display-${productId}`).src = product.image;
     }
   }
 }
 
-function renderProducts() {
+function buildProductCardHTML(p) {
+  const status = p.status || 'disponible';
+  let statusBadge = '';
+
+  let sizes = p.sizes || [];
+  if (sizes.length === 0 && p.volume && p.price) {
+    sizes = [{ name: p.volume, price: p.price, image: p.image }];
+  }
+
+  const initialPrice = sizes.length > 0 ? sizes[0].price : (p.price || 0);
+  const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : (p.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume');
+
+  let customBadgeHTML = '';
+  if (p.badge) {
+    customBadgeHTML = `<div class="absolute top-3 right-3 z-10 bg-gold/90 text-black font-bold border border-gold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider shadow-md">${p.badge}</div>`;
+  }
+
+  let actionButton = `
+    <div class="space-y-2">
+      ${sizes.length > 0 ? `
+        <select id="size-select-${p.id}" onchange="updateCardSelection('${p.id}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold">
+          ${sizes.map((s, idx) => `<option value="${s.name}" data-price="${s.price}" data-img="${s.image || ''}" ${idx === 0 ? 'selected' : ''}>${s.name} - L. ${parseFloat(s.price).toFixed(2)}</option>`).join('')}
+        </select>
+      ` : ''}
+      <button onclick="addToCartWithSelectedSize('${p.id}')" class="w-full py-2.5 px-3 gold-bg text-black font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md">
+        <i class="fa-solid fa-cart-plus text-sm"></i><span>Agregar al Carrito</span>
+      </button>
+    </div>
+  `;
+
+  if (status === 'agotado') {
+    statusBadge = `<div class="absolute top-3 right-12 z-10 bg-red-900/90 text-red-200 border border-red-500/50 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Agotado</div>`;
+    actionButton = `<button disabled class="w-full py-2.5 px-3 bg-gray-800 text-gray-500 font-semibold rounded-xl text-xs cursor-not-allowed flex items-center justify-center space-x-1.5"><i class="fa-solid fa-ban text-sm"></i><span>Agotado</span></button>`;
+  } else if (status === 'proximamente') {
+    statusBadge = `<div class="absolute top-3 right-12 z-10 bg-amber-900/90 text-amber-200 border border-amber-500/50 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Próximamente</div>`;
+    actionButton = `<button disabled class="w-full py-2.5 px-3 bg-gray-800 text-amber-400 font-semibold rounded-xl text-xs cursor-not-allowed flex items-center justify-center space-x-1.5"><i class="fa-solid fa-clock text-sm"></i><span>Próximamente</span></button>`;
+  }
+
+  return `
+    <div id="card-${p.id}" class="bg-cardBg border border-gold/20 rounded-2xl overflow-hidden shadow-xl hover:border-gold/50 transition duration-300 flex flex-col group relative">
+      <div class="absolute top-3 left-3 z-10 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30">
+        <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${p.brand || 'Línea Pura'}</span>
+      </div>
+      ${customBadgeHTML}
+      ${statusBadge}
+      ${isAdmin ? `
+        <div class="absolute top-12 right-3 z-10 flex space-x-1.5 mt-1">
+          <button onclick="openEditProductModal('${p.id}')" title="Editar" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
+          <button onclick="deleteFromSupabase('${p.id}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      ` : ''}
+      <div class="relative h-64 overflow-hidden bg-inputBg flex items-center justify-center p-4">
+        <img id="img-display-${p.id}" src="${initialImage}" alt="${p.name}" loading="lazy" class="w-full h-full object-cover rounded-xl group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">
+      </div>
+      <div class="p-5 flex-1 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[11px] font-semibold text-emerald-400 tracking-wide bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-check mr-1"></i>100% ORIGINAL</span>
+          </div>
+          <h4 class="font-cinzel text-base font-bold text-white mb-1 leading-snug">${p.name}</h4>
+          <div id="price-display-${p.id}" class="font-cinzel text-lg font-bold text-gold mb-4">L. ${parseFloat(initialPrice).toFixed(2)}</div>
+        </div>
+        <div>${actionButton}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderProducts(forceRebuild = false) {
   const grid = document.getElementById('products-grid');
   const emptyState = document.getElementById('empty-state');
   const loadMoreContainer = document.getElementById('load-more-container');
-  const desktopQuery = (document.getElementById('search-input').value || '').toLowerCase().trim();
-  const mobileQuery = (document.getElementById('search-input-mobile').value || '').toLowerCase().trim();
+  const desktopQuery = normalizeText(document.getElementById('search-input').value).toLowerCase();
+  const mobileQuery = normalizeText(document.getElementById('search-input-mobile').value).toLowerCase();
   const searchQuery = desktopQuery || mobileQuery;
+  const selectedBrandNorm = normalizeText(currentBrand).toLowerCase();
 
-  const isFiltering = currentBrand !== 'Todos' || searchQuery !== '';
-  const sourceList = isFiltering ? getSourceCatalog() : perfumes;
+  if (forceRebuild || !gridBuiltForData) {
+    grid.innerHTML = perfumes.map(p => buildProductCardHTML(p)).join('');
+    gridBuiltForData = true;
+  }
 
-  let filtered = sourceList.filter(p => {
-    const brand = (p.brand || '').toLowerCase().trim();
-    const name = (p.name || '').toLowerCase().trim();
-    const matchesBrand = currentBrand === 'Todos' || brand === currentBrand.toLowerCase().trim();
-    const matchesSearch = searchQuery === '' || name.includes(searchQuery) || brand.includes(searchQuery);
-    return matchesBrand && matchesSearch;
-  });
+  let visibleCount = 0;
 
-  if (filtered.length === 0) {
-    grid.innerHTML = '';
+  for (let i = 0; i < perfumes.length; i++) {
+    const p = perfumes[i];
+    const cardEl = document.getElementById(`card-${p.id}`);
+    const matchesBrand =
+      selectedBrandNorm === 'todos' ||
+      p.brandLower === selectedBrandNorm ||
+      p.brandLower.includes(selectedBrandNorm) ||
+      selectedBrandNorm.includes(p.brandLower);
+    const matchesSearch =
+      searchQuery === '' ||
+      p.nameLower.includes(searchQuery) ||
+      p.brandLower.includes(searchQuery);
+    const shouldShow = matchesBrand && matchesSearch;
+
+    if (shouldShow) visibleCount++;
+
+    if (cardEl) {
+      cardEl.classList.toggle('hidden', !shouldShow);
+    }
+  }
+
+  if (visibleCount === 0) {
     loadMoreContainer.classList.add('hidden');
     emptyState.classList.remove('hidden');
-    return;
-  }
-
-  emptyState.classList.add('hidden');
-
-  grid.innerHTML = filtered.map(p => {
-    const status = p.status || 'disponible';
-    let statusBadge = '';
-
-    let sizes = p.sizes || [];
-    if (sizes.length === 0 && p.volume && p.price) {
-      sizes = [{ name: p.volume, price: p.price, image: p.image }];
-    }
-
-    const initialPrice = sizes.length > 0 ? sizes[0].price : (p.price || 0);
-    const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : (p.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume');
-
-    let customBadgeHTML = '';
-    if (p.badge) {
-      customBadgeHTML = `<div class="absolute top-3 right-3 z-10 bg-gold/90 text-black font-bold border border-gold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider shadow-md">${p.badge}</div>`;
-    }
-
-    let actionButton = `
-      <div class="space-y-2">
-        ${sizes.length > 0 ? `
-          <select id="size-select-${p.id}" onchange="updateCardSelection('${p.id}', this)" class="w-full bg-inputBg border border-gold/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold">
-            ${sizes.map((s, idx) => `<option value="${s.name}" data-price="${s.price}" data-img="${s.image || ''}" ${idx === 0 ? 'selected' : ''}>${s.name} - L. ${parseFloat(s.price).toFixed(2)}</option>`).join('')}
-          </select>
-        ` : ''}
-        <button onclick="addToCartWithSelectedSize('${p.id}')" class="w-full py-2.5 px-3 gold-bg text-black font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md">
-          <i class="fa-solid fa-cart-plus text-sm"></i><span>Agregar al Carrito</span>
-        </button>
-      </div>
-    `;
-
-    if (status === 'agotado') {
-      statusBadge = `<div class="absolute top-3 right-12 z-10 bg-red-900/90 text-red-200 border border-red-500/50 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Agotado</div>`;
-      actionButton = `<button disabled class="w-full py-2.5 px-3 bg-gray-800 text-gray-500 font-semibold rounded-xl text-xs cursor-not-allowed flex items-center justify-center space-x-1.5"><i class="fa-solid fa-ban text-sm"></i><span>Agotado</span></button>`;
-    } else if (status === 'proximamente') {
-      statusBadge = `<div class="absolute top-3 right-12 z-10 bg-amber-900/90 text-amber-200 border border-amber-500/50 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Próximamente</div>`;
-      actionButton = `<button disabled class="w-full py-2.5 px-3 bg-gray-800 text-amber-400 font-semibold rounded-xl text-xs cursor-not-allowed flex items-center justify-center space-x-1.5"><i class="fa-solid fa-clock text-sm"></i><span>Próximamente</span></button>`;
-    }
-
-    return `
-      <div class="bg-cardBg border border-gold/20 rounded-2xl overflow-hidden shadow-xl hover:border-gold/50 transition duration-300 flex flex-col group relative">
-        <div class="absolute top-3 left-3 z-10 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30">
-          <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${p.brand || 'Línea Pura'}</span>
-        </div>
-        ${customBadgeHTML}
-        ${statusBadge}
-        ${isAdmin ? `
-          <div class="absolute top-12 right-3 z-10 flex space-x-1.5 mt-1">
-            <button onclick="openEditProductModal('${p.id}')" title="Editar" class="w-8 h-8 rounded-full bg-black/80 border border-gold text-gold hover:bg-gold hover:text-black flex items-center justify-center text-xs transition"><i class="fa-solid fa-pen"></i></button>
-            <button onclick="deleteFromSupabase('${p.id}')" title="Eliminar" class="w-8 h-8 rounded-full bg-black/80 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center text-xs transition"><i class="fa-solid fa-trash"></i></button>
-          </div>
-        ` : ''}
-        <div class="relative h-64 overflow-hidden bg-inputBg flex items-center justify-center p-4">
-          <img id="img-display-${p.id}" src="${initialImage}" alt="${p.name}" loading="lazy" class="w-full h-full object-cover rounded-xl group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x400/141414/D4AF37?text=Perfume'">
-        </div>
-        <div class="p-5 flex-1 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-[11px] font-semibold text-emerald-400 tracking-wide bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-check mr-1"></i>100% ORIGINAL</span>
-            </div>
-            <h4 class="font-cinzel text-base font-bold text-white mb-1 leading-snug">${p.name}</h4>
-            <div id="price-display-${p.id}" class="font-cinzel text-lg font-bold text-gold mb-4">L. ${parseFloat(initialPrice).toFixed(2)}</div>
-          </div>
-          <div>${actionButton}</div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  if (hayMasRegistros && currentBrand === 'Todos' && searchQuery === '') {
-    loadMoreContainer.classList.remove('hidden');
   } else {
-    loadMoreContainer.classList.add('hidden');
+    emptyState.classList.add('hidden');
+    if (hayMasRegistros && selectedBrandNorm === 'todos' && searchQuery === '') {
+      loadMoreContainer.classList.remove('hidden');
+    } else {
+      loadMoreContainer.classList.add('hidden');
+    }
   }
 }
 
-async function filterProducts() {
+function filterProducts() {
   document.getElementById('search-input-mobile').value = document.getElementById('search-input').value;
-  if (document.getElementById('search-input').value.trim() !== '') {
-    await ensureFullCatalogLoaded();
-  }
-  renderProducts();
+  renderProducts(false);
 }
 
-async function filterProductsMobile() {
+function filterProductsMobile() {
   document.getElementById('search-input').value = document.getElementById('search-input-mobile').value;
-  if (document.getElementById('search-input-mobile').value.trim() !== '') {
-    await ensureFullCatalogLoaded();
-  }
-  renderProducts();
+  renderProducts(false);
 }
 
 function handleLogoClick() {
@@ -712,7 +707,7 @@ function verifyPassword(event) {
     applyAdminModeUI();
     closePasswordModal();
     showToast('¡Panel Admin Activo!', 'success');
-    renderProducts();
+    renderProducts(true);
   } else { showToast('Contraseña incorrecta', 'error'); }
 }
 
@@ -720,7 +715,7 @@ function logoutAdmin() {
   isAdmin = false;
   applyAdminModeUI();
   showToast('Saliste del modo Admin', 'info');
-  renderProducts();
+  renderProducts(true);
 }
 
 function applyAdminModeUI() {
@@ -774,7 +769,7 @@ function openProductModal(id = null) {
 
   if (id) {
     document.getElementById('product-modal-title').innerText = 'Editar Perfume';
-    const p = getSourceCatalog().find(i => i.id === id);
+    const p = perfumes.find(i => i.id === id);
     if (p) {
       document.getElementById('edit-product-id').value = p.id;
       document.getElementById('prod-name').value = p.name;
@@ -843,8 +838,8 @@ function compressAndPreview(event, targetInputId) {
 function saveProduct(event) {
   event.preventDefault();
   const editId = document.getElementById('edit-product-id').value;
-  let name = document.getElementById('prod-name').value.trim();
-  const brand = document.getElementById('prod-brand').value.trim();
+  let name = normalizeText(document.getElementById('prod-name').value);
+  const brand = normalizeText(document.getElementById('prod-brand').value);
   const status = document.getElementById('prod-status').value;
   const badge = document.getElementById('prod-badge').value;
   let mainImage = document.getElementById('prod-img-base64').value;
@@ -855,7 +850,7 @@ function saveProduct(event) {
 
   const targetId = editId ? editId : 'p_' + Date.now();
   if (!mainImage && editId) { 
-    const found = getSourceCatalog().find(i => i.id === editId);
+    const found = perfumes.find(i => i.id === editId);
     if (found) mainImage = found.image;
   }
   if (!mainImage) { mainImage = 'https://placehold.co/400x400/141414/D4AF37?text=Perfume'; }
@@ -898,7 +893,7 @@ function saveProduct(event) {
 }
 
 function addToCartWithSelectedSize(id) {
-  const product = getSourceCatalog().find(i => i.id === id);
+  const product = perfumes.find(i => i.id === id);
   if (!product || product.status === 'agotado' || product.status === 'proximamente') return;
 
   let selectedSizeName = product.volume || 'Estándar';
