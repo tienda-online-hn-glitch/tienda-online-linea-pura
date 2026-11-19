@@ -324,19 +324,23 @@ const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let perfumes = [];
 let filteredPerfumes = [];
+let knownBrands = new Set();
 let cart = [];
 let isAdmin = false;
 let currentBrand = 'Todos';
 let currentSearch = '';
 let adminPassword = 'Lineapura1010';
 let searchDebounceTimer = null;
+let activeRequestToken = 0;
 
 // Lee el número guardado en el navegador o usa el tuyo predeterminado
 let whatsappNumber = localStorage.getItem('linea_pura_whatsapp') || '50433185377';
 
 let paginaActual = 0;
+let paginaFiltrada = 0;
 const tamanoPagina = 16; 
 let hayMasRegistros = true;
+let hayMasFiltrados = false;
 
 window.onload = function() {
   loadCartAndSettings();
@@ -390,11 +394,14 @@ function mapRawPerfumes(rows) {
       itemBadge = '💎 Exclusivo';
     }
 
+    const cleanBrand = normalizeText(item.brand) || 'Línea Pura';
+    if (cleanBrand) knownBrands.add(cleanBrand);
+
     return {
       id: item.id || 'p_' + Math.random(),
       name: normalizeText(cleanName),
       rawFullName: rawName,
-      brand: normalizeText(item.brand) || 'Línea Pura',
+      brand: cleanBrand,
       status: item.status || 'disponible',
       badge: itemBadge,
       volume: item.volume || (parsedSizes[0] ? parsedSizes[0].name : 'Estándar'),
@@ -405,11 +412,25 @@ function mapRawPerfumes(rows) {
   });
 }
 
+function isFilterMode() {
+  return normalizeText(currentBrand).toLowerCase() !== 'todos' || normalizeText(currentSearch) !== '';
+}
+
+function showLoadingIndicator() {
+  document.getElementById('loading-state').classList.remove('hidden');
+  document.getElementById('empty-state').classList.add('hidden');
+  document.getElementById('load-more-container').classList.add('hidden');
+  document.getElementById('products-grid').innerHTML = '';
+}
+
 async function reiniciarYRecargar() {
   paginaActual = 0;
+  paginaFiltrada = 0;
   perfumes = [];
   filteredPerfumes = [];
+  knownBrands.clear();
   hayMasRegistros = true;
+  hayMasFiltrados = false;
   await loadFromSupabase(true);
 }
 
@@ -463,54 +484,115 @@ async function loadFromSupabase(reset = false) {
   updateBrandsDatalist();
 }
 
-async function fetchMatchingFromSupabase(brandFilter, searchFilter) {
+async function fetchMatchingFromSupabase(brandFilter, searchFilter, reset = true) {
   const loadingState = document.getElementById('loading-state');
   const emptyState = document.getElementById('empty-state');
-  const grid = document.getElementById('products-grid');
+  const token = ++activeRequestToken;
 
-  loadingState.classList.remove('hidden');
-  emptyState.classList.add('hidden');
-  grid.innerHTML = '';
+  if (reset) {
+    paginaFiltrada = 0;
+    filteredPerfumes = [];
+    hayMasFiltrados = true;
+    showLoadingIndicator();
+  }
+
+  const inicio = paginaFiltrada * tamanoPagina;
+  const fin = inicio + tamanoPagina - 1;
 
   try {
-    let query = _supabase
-      .from('perfumes')
-      .select('id, name, brand, status, volume, price, image, sizes')
-      .order('id', { ascending: false });
-
     const cleanBrand = normalizeText(brandFilter);
     const cleanSearch = normalizeText(searchFilter);
+    const hasBrand = cleanBrand && cleanBrand.toLowerCase() !== 'todos';
 
-    if (cleanBrand && cleanBrand.toLowerCase() !== 'todos') {
-      query = query.ilike('brand', `%${cleanBrand}%`);
-    }
+    let rows = [];
 
-    if (cleanSearch) {
-      query = query.or(`brand.ilike.%${cleanSearch}%,name.ilike.%${cleanSearch}%`);
-    }
+    if (cleanSearch && !hasBrand) {
+      // Dos consultas limpias en paralelo por marca y por nombre para evitar fallos en .or()
+      const [resBrand, resName] = await Promise.all([
+        _supabase
+          .from('perfumes')
+          .select('id, name, brand, status, volume, price, image, sizes')
+          .ilike('brand', `%${cleanSearch}%`)
+          .order('id', { ascending: false })
+          .range(inicio, fin),
+        _supabase
+          .from('perfumes')
+          .select('id, name, brand, status, volume, price, image, sizes')
+          .ilike('name', `%${cleanSearch}%`)
+          .order('id', { ascending: false })
+          .range(inicio, fin)
+      ]);
 
-    const { data, error } = await query;
+      if (token !== activeRequestToken) return;
 
-    if (error) {
-      console.error("Error filtrando en Supabase:", error);
-      showToast('Error al buscar: ' + error.message, 'error');
-      filteredPerfumes = [];
+      if (resBrand.error && resName.error) {
+        throw resBrand.error;
+      }
+
+      const seenIds = new Set(filteredPerfumes.map(p => p.id));
+      const combined = [...(resBrand.data || []), ...(resName.data || [])];
+      for (const row of combined) {
+        if (!seenIds.has(row.id)) {
+          seenIds.add(row.id);
+          rows.push(row);
+        }
+      }
+
+      const brandCount = (resBrand.data || []).length;
+      const nameCount = (resName.data || []).length;
+      hayMasFiltrados = brandCount === tamanoPagina || nameCount === tamanoPagina;
     } else {
-      filteredPerfumes = mapRawPerfumes(data);
+      let query = _supabase
+        .from('perfumes')
+        .select('id, name, brand, status, volume, price, image, sizes')
+        .order('id', { ascending: false });
+
+      if (hasBrand) {
+        query = query.ilike('brand', `%${cleanBrand}%`);
+      }
+
+      if (cleanSearch) {
+        query = query.ilike('name', `%${cleanSearch}%`);
+      }
+
+      const { data, error } = await query.range(inicio, fin);
+
+      if (token !== activeRequestToken) return;
+      if (error) throw error;
+
+      rows = data || [];
+      hayMasFiltrados = rows.length === tamanoPagina;
+    }
+
+    const mapped = mapRawPerfumes(rows);
+    if (reset) {
+      filteredPerfumes = mapped;
+    } else {
+      const existingIds = new Set(filteredPerfumes.map(p => p.id));
+      filteredPerfumes = [...filteredPerfumes, ...mapped.filter(p => !existingIds.has(p.id))];
     }
   } catch (err) {
-    console.error("Excepción en búsqueda:", err);
-    showToast('Error de conexión al buscar', 'error');
-    filteredPerfumes = [];
+    if (token !== activeRequestToken) return;
+    console.error("Error buscando en Supabase:", err);
+    showToast('Error al buscar fragancias', 'error');
+    if (reset) filteredPerfumes = [];
+    hayMasFiltrados = false;
   }
 
   loadingState.classList.add('hidden');
+  emptyState.classList.add('hidden');
+  renderBrandFilters();
   renderProducts();
 }
 
 async function cargarMasPerfumes() {
-  paginaActual++;
-  await loadFromSupabase(false);
+  if (isFilterMode()) {
+    paginaFiltrada++;
+    await fetchMatchingFromSupabase(currentBrand, currentSearch, false);
+  } else {
+    paginaActual++;
+    await loadFromSupabase(false);
+  }
 }
 
 async function saveToSupabase(product) {
@@ -547,7 +629,7 @@ async function deleteFromSupabase(id) {
 }
 
 function getBrands() {
-  const brandsSet = new Set(perfumes.map(p => (p.brand || '').trim()).filter(b => b !== ''));
+  const brandsSet = new Set([...knownBrands, ...perfumes.map(p => (p.brand || '').trim()).filter(b => b !== '')]);
   return ['Todos', ...Array.from(brandsSet).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))];
 }
 
@@ -571,18 +653,20 @@ async function setBrand(brand) {
   currentBrand = normalizeText(brand) || 'Todos';
   renderBrandFilters();
 
-  if (currentBrand === 'Todos' && normalizeText(currentSearch) === '') {
+  if (!isFilterMode()) {
+    activeRequestToken++;
     filteredPerfumes = [];
+    document.getElementById('loading-state').classList.add('hidden');
     renderProducts();
     return;
   }
 
-  await fetchMatchingFromSupabase(currentBrand, currentSearch);
+  await fetchMatchingFromSupabase(currentBrand, currentSearch, true);
 }
 
 function updateBrandsDatalist() {
   const datalist = document.getElementById('brands-datalist');
-  const brands = Array.from(new Set(perfumes.map(p => (p.brand || '').trim()).filter(b => b !== ''))).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  const brands = Array.from(new Set([...knownBrands, ...perfumes.map(p => (p.brand || '').trim()).filter(b => b !== '')])).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   datalist.innerHTML = brands.map(b => `<option value="${b}">`).join('');
 }
 
@@ -596,7 +680,7 @@ function updateCardSelection(productId, selectElement) {
   if (img && img !== 'null' && img !== '') {
     document.getElementById(`img-display-${productId}`).src = img;
   } else {
-    const pool = (currentBrand !== 'Todos' || normalizeText(currentSearch) !== '') ? filteredPerfumes : perfumes;
+    const pool = isFilterMode() ? filteredPerfumes : perfumes;
     const product = pool.find(i => i.id === productId);
     if (product) {
       document.getElementById(`img-display-${productId}`).src = product.image;
@@ -609,7 +693,7 @@ function renderProducts() {
   const emptyState = document.getElementById('empty-state');
   const loadMoreContainer = document.getElementById('load-more-container');
 
-  const isCustomFilterActive = currentBrand !== 'Todos' || normalizeText(currentSearch) !== '';
+  const isCustomFilterActive = isFilterMode();
   const listToShow = isCustomFilterActive ? filteredPerfumes : perfumes;
 
   if (listToShow.length === 0) {
@@ -689,7 +773,8 @@ function renderProducts() {
     `;
   }).join('');
 
-  if (hayMasRegistros && !isCustomFilterActive) {
+  const shouldShowLoadMore = isCustomFilterActive ? hayMasFiltrados : hayMasRegistros;
+  if (shouldShowLoadMore) {
     loadMoreContainer.classList.remove('hidden');
   } else {
     loadMoreContainer.classList.add('hidden');
@@ -698,14 +783,20 @@ function renderProducts() {
 
 function scheduleSearchQuery() {
   clearTimeout(searchDebounceTimer);
+
+  if (!isFilterMode()) {
+    activeRequestToken++;
+    filteredPerfumes = [];
+    document.getElementById('loading-state').classList.add('hidden');
+    renderProducts();
+    return;
+  }
+
+  // Muestra "Cargando Fragancias..." de inmediato al buscar
+  showLoadingIndicator();
+
   searchDebounceTimer = setTimeout(async () => {
-    const cleanSearch = normalizeText(currentSearch);
-    if (currentBrand === 'Todos' && cleanSearch === '') {
-      filteredPerfumes = [];
-      renderProducts();
-      return;
-    }
-    await fetchMatchingFromSupabase(currentBrand, cleanSearch);
+    await fetchMatchingFromSupabase(currentBrand, currentSearch, true);
   }, 250);
 }
 
@@ -802,7 +893,7 @@ function openProductModal(id = null) {
 
   if (id) {
     document.getElementById('product-modal-title').innerText = 'Editar Perfume';
-    const pool = (currentBrand !== 'Todos' || normalizeText(currentSearch) !== '') ? filteredPerfumes : perfumes;
+    const pool = isFilterMode() ? filteredPerfumes : perfumes;
     const p = pool.find(i => i.id === id);
     if (p) {
       document.getElementById('edit-product-id').value = p.id;
@@ -884,7 +975,7 @@ function saveProduct(event) {
 
   const targetId = editId ? editId : 'p_' + Date.now();
   if (!mainImage && editId) { 
-    const pool = (currentBrand !== 'Todos' || normalizeText(currentSearch) !== '') ? filteredPerfumes : perfumes;
+    const pool = isFilterMode() ? filteredPerfumes : perfumes;
     const found = pool.find(i => i.id === editId);
     if (found) mainImage = found.image;
   }
@@ -928,7 +1019,7 @@ function saveProduct(event) {
 }
 
 function addToCartWithSelectedSize(id) {
-  const pool = (currentBrand !== 'Todos' || normalizeText(currentSearch) !== '') ? filteredPerfumes : perfumes;
+  const pool = isFilterMode() ? filteredPerfumes : perfumes;
   const product = pool.find(i => i.id === id);
   if (!product || product.status === 'agotado' || product.status === 'proximamente') return;
 
