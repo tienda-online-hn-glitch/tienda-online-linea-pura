@@ -28,6 +28,14 @@ tailwind.config = {
 </script>
 <style>
 body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; color: #E5E7EB; }
+input, select { color-scheme: dark; }
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #E5E7EB !important;
+  -webkit-box-shadow: 0 0 0px 1000px #1E1E1E inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
 .gold-gradient-text { background: linear-gradient(135deg, #F3E5AB 0%, #D4AF37 50%, #AA8C2C 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .gold-bg { background: linear-gradient(135deg, #D4AF37 0%, #AA8C2C 100%); }
 .gold-bg:hover { background: linear-gradient(135deg, #E6C547 0%, #C29F34 100%); }
@@ -54,11 +62,18 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
     </div>
 
     <div class="hidden md:flex items-center flex-1 max-w-md mx-8">
-      <div class="relative w-full">
-        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" id="search-input" oninput="filterProducts()" placeholder="Buscar por nombre o marca..."
-          class="w-full bg-inputBg border border-gold/30 rounded-full pl-10 pr-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-gold transition">
-      </div>
+      <form onsubmit="submitSearch(event, 'desktop')" class="relative w-full flex items-center">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
+        <input type="search" id="search-input" oninput="filterProducts()" onchange="filterProducts()" placeholder="Buscar por nombre o marca..." autocomplete="off"
+          class="w-full bg-inputBg border border-gold/30 rounded-full pl-9 pr-24 py-2 text-sm text-gray-200 focus:outline-none focus:border-gold transition">
+        <button type="button" id="clear-search-desktop" onclick="clearSearch()" title="Limpiar búsqueda"
+          class="hidden absolute right-16 text-gray-400 hover:text-white px-2 py-1 text-xs">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <button type="submit" class="absolute right-1.5 px-3 py-1 gold-bg text-black font-semibold rounded-full text-xs transition">
+          Buscar
+        </button>
+      </form>
     </div>
 
     <div class="flex items-center space-x-4">
@@ -76,11 +91,18 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
   </div>
 
   <div class="md:hidden px-4 pb-3">
-    <div class="relative w-full">
-      <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-      <input type="text" id="search-input-mobile" oninput="filterProductsMobile()" placeholder="Buscar por nombre o marca..."
-        class="w-full bg-inputBg border border-gold/30 rounded-full pl-10 pr-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-gold transition">
-    </div>
+    <form onsubmit="submitSearch(event, 'mobile')" class="relative w-full flex items-center">
+      <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
+      <input type="search" id="search-input-mobile" oninput="filterProductsMobile()" onchange="filterProductsMobile()" placeholder="Buscar por nombre o marca..." autocomplete="off"
+        class="w-full bg-inputBg border border-gold/30 rounded-full pl-9 pr-24 py-2 text-sm text-gray-200 focus:outline-none focus:border-gold transition">
+      <button type="button" id="clear-search-mobile" onclick="clearSearch()" title="Limpiar búsqueda"
+        class="hidden absolute right-16 text-gray-400 hover:text-white px-2 py-1 text-xs">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <button type="submit" class="absolute right-1.5 px-3 py-1 gold-bg text-black font-semibold rounded-full text-xs transition">
+        Buscar
+      </button>
+    </form>
   </div>
 </header>
 
@@ -142,7 +164,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0B0B; 
   <div id="empty-state" class="hidden text-center py-20">
     <i class="fa-solid fa-bottle-droplet text-5xl text-gold/30 mb-4"></i>
     <h3 class="font-cinzel text-xl text-gray-300">No se encontraron perfumes</h3>
-    <p class="text-gray-500 text-sm mt-1">Prueba agregando uno desde el panel de administrador.</p>
+    <p class="text-gray-500 text-sm mt-1">Intenta con otro nombre o selecciona "Todos" para ver el catálogo.</p>
   </div>
 </main>
 
@@ -333,7 +355,6 @@ let adminPassword = 'Lineapura1010';
 let searchDebounceTimer = null;
 let activeRequestToken = 0;
 
-// Lee el número guardado en el navegador o usa el tuyo predeterminado
 let whatsappNumber = localStorage.getItem('linea_pura_whatsapp') || '50433185377';
 
 let paginaActual = 0;
@@ -362,6 +383,21 @@ function loadCartAndSettings() {
 
 function normalizeText(str) {
   return String(str || '').replace(/\s+/g, ' ').trim();
+}
+
+function syncSearchInputs(val) {
+  currentSearch = val;
+  const desktopEl = document.getElementById('search-input');
+  const mobileEl = document.getElementById('search-input-mobile');
+  const clearDesktop = document.getElementById('clear-search-desktop');
+  const clearMobile = document.getElementById('clear-search-mobile');
+
+  if (desktopEl && desktopEl.value !== val) desktopEl.value = val;
+  if (mobileEl && mobileEl.value !== val) mobileEl.value = val;
+
+  const hasText = normalizeText(val) !== '';
+  if (clearDesktop) clearDesktop.classList.toggle('hidden', !hasText);
+  if (clearMobile) clearMobile.classList.toggle('hidden', !hasText);
 }
 
 function mapRawPerfumes(rows) {
@@ -417,10 +453,15 @@ function isFilterMode() {
 }
 
 function showLoadingIndicator() {
-  document.getElementById('loading-state').classList.remove('hidden');
-  document.getElementById('empty-state').classList.add('hidden');
-  document.getElementById('load-more-container').classList.add('hidden');
-  document.getElementById('products-grid').innerHTML = '';
+  const loadingState = document.getElementById('loading-state');
+  const emptyState = document.getElementById('empty-state');
+  const loadMore = document.getElementById('load-more-container');
+  const grid = document.getElementById('products-grid');
+
+  if (loadingState) loadingState.classList.remove('hidden');
+  if (emptyState) emptyState.classList.add('hidden');
+  if (loadMore) loadMore.classList.add('hidden');
+  if (grid) grid.innerHTML = '';
 }
 
 async function reiniciarYRecargar() {
@@ -431,6 +472,8 @@ async function reiniciarYRecargar() {
   knownBrands.clear();
   hayMasRegistros = true;
   hayMasFiltrados = false;
+  currentBrand = 'Todos';
+  syncSearchInputs('');
   await loadFromSupabase(true);
 }
 
@@ -507,7 +550,6 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, reset = true
     let rows = [];
 
     if (cleanSearch && !hasBrand) {
-      // Dos consultas limpias en paralelo por marca y por nombre para evitar fallos en .or()
       const [resBrand, resName] = await Promise.all([
         _supabase
           .from('perfumes')
@@ -650,6 +692,9 @@ function renderBrandFilters() {
 }
 
 async function setBrand(brand) {
+  clearTimeout(searchDebounceTimer);
+  // Al seleccionar una marca, limpiamos la barra de búsqueda para que no se crucen filtros
+  syncSearchInputs('');
   currentBrand = normalizeText(brand) || 'Todos';
   renderBrandFilters();
 
@@ -661,7 +706,7 @@ async function setBrand(brand) {
     return;
   }
 
-  await fetchMatchingFromSupabase(currentBrand, currentSearch, true);
+  await fetchMatchingFromSupabase(currentBrand, '', true);
 }
 
 function updateBrandsDatalist() {
@@ -781,8 +826,15 @@ function renderProducts() {
   }
 }
 
-function scheduleSearchQuery() {
+function scheduleSearchQuery(immediate = false) {
   clearTimeout(searchDebounceTimer);
+
+  const cleanSearch = normalizeText(currentSearch);
+
+  if (cleanSearch !== '' && currentBrand !== 'Todos') {
+    currentBrand = 'Todos';
+    renderBrandFilters();
+  }
 
   if (!isFilterMode()) {
     activeRequestToken++;
@@ -792,24 +844,54 @@ function scheduleSearchQuery() {
     return;
   }
 
-  // Muestra "Cargando Fragancias..." de inmediato al buscar
+  // Muestra "Cargando Fragancias..." de inmediato
   showLoadingIndicator();
 
+  if (immediate) {
+    fetchMatchingFromSupabase('Todos', cleanSearch, true);
+    return;
+  }
+
   searchDebounceTimer = setTimeout(async () => {
-    await fetchMatchingFromSupabase(currentBrand, currentSearch, true);
+    await fetchMatchingFromSupabase('Todos', cleanSearch, true);
   }, 250);
 }
 
 function filterProducts() {
-  currentSearch = document.getElementById('search-input').value;
-  document.getElementById('search-input-mobile').value = currentSearch;
-  scheduleSearchQuery();
+  const val = document.getElementById('search-input').value;
+  syncSearchInputs(val);
+  scheduleSearchQuery(false);
 }
 
 function filterProductsMobile() {
-  currentSearch = document.getElementById('search-input-mobile').value;
-  document.getElementById('search-input').value = currentSearch;
-  scheduleSearchQuery();
+  const val = document.getElementById('search-input-mobile').value;
+  syncSearchInputs(val);
+  scheduleSearchQuery(false);
+}
+
+function submitSearch(event, source) {
+  event.preventDefault();
+  const inputEl = source === 'mobile'
+    ? document.getElementById('search-input-mobile')
+    : document.getElementById('search-input');
+  if (inputEl) {
+    inputEl.blur();
+    syncSearchInputs(inputEl.value);
+  }
+  scheduleSearchQuery(true);
+}
+
+function clearSearch() {
+  clearTimeout(searchDebounceTimer);
+  syncSearchInputs('');
+  if (currentBrand === 'Todos') {
+    activeRequestToken++;
+    filteredPerfumes = [];
+    document.getElementById('loading-state').classList.add('hidden');
+    renderProducts();
+  } else {
+    fetchMatchingFromSupabase(currentBrand, '', true);
+  }
 }
 
 function handleLogoClick() {
