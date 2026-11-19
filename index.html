@@ -323,6 +323,7 @@ const { createClient } = supabase;
 const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let perfumes = [];
+let allPerfumesCache = [];
 let cart = [];
 let isAdmin = false;
 let currentBrand = 'Todos';
@@ -353,9 +354,68 @@ function loadCartAndSettings() {
   isAdmin = false;
 }
 
+function mapRawPerfumes(rows) {
+  return (rows || []).map(item => {
+    let parsedSizes = [];
+    try {
+      if (typeof item.sizes === 'string') {
+        parsedSizes = JSON.parse(item.sizes);
+      } else if (Array.isArray(item.sizes)) {
+        parsedSizes = item.sizes;
+      }
+    } catch (e) { parsedSizes = []; }
+
+    if (parsedSizes.length === 0 && item.volume && item.price) {
+      parsedSizes = [{ name: item.volume, price: item.price, image: item.image }];
+    }
+
+    let rawName = item.name || 'Sin nombre';
+    let cleanName = rawName;
+    let itemBadge = '';
+
+    if (rawName.includes(' [🔥 Más Vendido]')) {
+      cleanName = rawName.replace(' [🔥 Más Vendido]', '');
+      itemBadge = '🔥 Más Vendido';
+    } else if (rawName.includes(' [✨ Novedad]')) {
+      cleanName = rawName.replace(' [✨ Novedad]', '');
+      itemBadge = '✨ Novedad';
+    } else if (rawName.includes(' [💎 Exclusivo]')) {
+      cleanName = rawName.replace(' [💎 Exclusivo]', '');
+      itemBadge = '💎 Exclusivo';
+    }
+
+    return {
+      id: item.id || 'p_' + Math.random(),
+      name: cleanName,
+      rawFullName: rawName,
+      brand: (item.brand || 'Línea Pura').trim(),
+      status: item.status || 'disponible',
+      badge: itemBadge,
+      volume: item.volume || (parsedSizes[0] ? parsedSizes[0].name : 'Estándar'),
+      price: item.price || (parsedSizes[0] ? parsedSizes[0].price : 0),
+      image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
+      sizes: parsedSizes
+    };
+  });
+}
+
+async function ensureFullCatalogLoaded() {
+  if (allPerfumesCache.length > 0 && !hayMasRegistros) return;
+  const { data, error } = await _supabase
+    .from('perfumes')
+    .select('id, name, brand, status, volume, price, image, sizes')
+    .order('id', { ascending: false });
+
+  if (!error && data) {
+    allPerfumesCache = mapRawPerfumes(data);
+    hayMasRegistros = false;
+  }
+}
+
 async function reiniciarYRecargar() {
   paginaActual = 0;
   perfumes = [];
+  allPerfumesCache = [];
   hayMasRegistros = true;
   await loadFromSupabase(true);
 }
@@ -384,48 +444,7 @@ async function loadFromSupabase(reset = false) {
       console.error("Error Supabase:", error);
       showToast('Error: ' + error.message, 'error');
     } else {
-      const nuevosItems = (data || []).map(item => {
-        let parsedSizes = [];
-        try {
-          if (typeof item.sizes === 'string') {
-            parsedSizes = JSON.parse(item.sizes);
-          } else if (Array.isArray(item.sizes)) {
-            parsedSizes = item.sizes;
-          }
-        } catch (e) { parsedSizes = []; }
-
-        if (parsedSizes.length === 0 && item.volume && item.price) {
-          parsedSizes = [{ name: item.volume, price: item.price, image: item.image }];
-        }
-
-        let rawName = item.name || 'Sin nombre';
-        let cleanName = rawName;
-        let itemBadge = '';
-
-        if (rawName.includes(' [🔥 Más Vendido]')) {
-          cleanName = rawName.replace(' [🔥 Más Vendido]', '');
-          itemBadge = '🔥 Más Vendido';
-        } else if (rawName.includes(' [✨ Novedad]')) {
-          cleanName = rawName.replace(' [✨ Novedad]', '');
-          itemBadge = '✨ Novedad';
-        } else if (rawName.includes(' [💎 Exclusivo]')) {
-          cleanName = rawName.replace(' [💎 Exclusivo]', '');
-          itemBadge = '💎 Exclusivo';
-        }
-
-        return {
-          id: item.id || 'p_' + Math.random(),
-          name: cleanName,
-          rawFullName: rawName,
-          brand: item.brand || 'Línea Pura',
-          status: item.status || 'disponible',
-          badge: itemBadge,
-          volume: item.volume || (parsedSizes[0] ? parsedSizes[0].name : 'Estándar'),
-          price: item.price || (parsedSizes[0] ? parsedSizes[0].price : 0),
-          image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
-          sizes: parsedSizes
-        };
-      });
+      const nuevosItems = mapRawPerfumes(data);
 
       if (nuevosItems.length < tamanoPagina) {
         hayMasRegistros = false;
@@ -436,6 +455,13 @@ async function loadFromSupabase(reset = false) {
       } else {
         perfumes = [...perfumes, ...nuevosItems];
       }
+
+      // Cargar catálogo completo en segundo plano para marcas y búsquedas sin perder registros
+      ensureFullCatalogLoaded().then(() => {
+        renderBrandFilters();
+        updateBrandsDatalist();
+        renderProducts();
+      });
 
       showToast(`¡Catálogo sincronizado!`, 'success');
     }
@@ -489,9 +515,14 @@ async function deleteFromSupabase(id) {
   }
 }
 
+function getSourceCatalog() {
+  return allPerfumesCache.length > 0 ? allPerfumesCache : perfumes;
+}
+
 function getBrands() {
-  const brandsSet = new Set(perfumes.map(p => (p.brand || '').trim()).filter(b => b !== ''));
-  return ['Todos', ...Array.from(brandsSet).sort()];
+  const source = getSourceCatalog();
+  const brandsSet = new Set(source.map(p => (p.brand || '').trim()).filter(b => b !== ''));
+  return ['Todos', ...Array.from(brandsSet).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))];
 }
 
 function renderBrandFilters() {
@@ -499,22 +530,30 @@ function renderBrandFilters() {
   const clearBtn = document.getElementById('clear-brand-btn');
   const brands = getBrands();
   clearBtn.classList.toggle('hidden', currentBrand === 'Todos');
-  container.innerHTML = brands.map(brand => `
-    <button onclick="setBrand('${brand}')" class="whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition ${currentBrand === brand ? 'gold-bg text-black font-semibold shadow-md' : 'bg-cardBg border border-gold/30 text-gray-300 hover:border-gold'}">
-      ${brand}
-    </button>
-  `).join('');
+  container.innerHTML = brands.map(brand => {
+    const encodedBrand = encodeURIComponent(brand);
+    const isActive = currentBrand.toLowerCase() === brand.toLowerCase();
+    return `
+      <button onclick="setBrand(decodeURIComponent('${encodedBrand}'))" class="whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition ${isActive ? 'gold-bg text-black font-semibold shadow-md' : 'bg-cardBg border border-gold/30 text-gray-300 hover:border-gold'}">
+        ${brand}
+      </button>
+    `;
+  }).join('');
 }
 
-function setBrand(brand) {
-  currentBrand = brand;
+async function setBrand(brand) {
+  currentBrand = (brand || 'Todos').trim();
   renderBrandFilters();
+  if (currentBrand !== 'Todos') {
+    await ensureFullCatalogLoaded();
+  }
   renderProducts();
 }
 
 function updateBrandsDatalist() {
   const datalist = document.getElementById('brands-datalist');
-  const brands = Array.from(new Set(perfumes.map(p => (p.brand || '').trim()).filter(b => b !== ''))).sort();
+  const source = getSourceCatalog();
+  const brands = Array.from(new Set(source.map(p => (p.brand || '').trim()).filter(b => b !== ''))).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   datalist.innerHTML = brands.map(b => `<option value="${b}">`).join('');
 }
 
@@ -528,7 +567,7 @@ function updateCardSelection(productId, selectElement) {
   if (img && img !== 'null' && img !== '') {
     document.getElementById(`img-display-${productId}`).src = img;
   } else {
-    const product = perfumes.find(i => i.id === productId);
+    const product = getSourceCatalog().find(i => i.id === productId);
     if (product) {
       document.getElementById(`img-display-${productId}`).src = product.image;
     }
@@ -539,17 +578,22 @@ function renderProducts() {
   const grid = document.getElementById('products-grid');
   const emptyState = document.getElementById('empty-state');
   const loadMoreContainer = document.getElementById('load-more-container');
-  const searchQuery = document.getElementById('search-input').value.toLowerCase() || document.getElementById('search-input-mobile').value.toLowerCase();
+  const desktopQuery = (document.getElementById('search-input').value || '').toLowerCase().trim();
+  const mobileQuery = (document.getElementById('search-input-mobile').value || '').toLowerCase().trim();
+  const searchQuery = desktopQuery || mobileQuery;
 
-  let filtered = perfumes.filter(p => {
-    const brand = p.brand || '';
-    const name = p.name || '';
-    const matchesBrand = currentBrand === 'Todos' || brand.toLowerCase() === currentBrand.toLowerCase();
-    const matchesSearch = name.toLowerCase().includes(searchQuery) || brand.toLowerCase().includes(searchQuery);
+  const isFiltering = currentBrand !== 'Todos' || searchQuery !== '';
+  const sourceList = isFiltering ? getSourceCatalog() : perfumes;
+
+  let filtered = sourceList.filter(p => {
+    const brand = (p.brand || '').toLowerCase().trim();
+    const name = (p.name || '').toLowerCase().trim();
+    const matchesBrand = currentBrand === 'Todos' || brand === currentBrand.toLowerCase().trim();
+    const matchesSearch = searchQuery === '' || name.includes(searchQuery) || brand.includes(searchQuery);
     return matchesBrand && matchesSearch;
   });
 
-  if (filtered.length === 0 && perfumes.length === 0) {
+  if (filtered.length === 0) {
     grid.innerHTML = '';
     loadMoreContainer.classList.add('hidden');
     emptyState.classList.remove('hidden');
@@ -633,13 +677,19 @@ function renderProducts() {
   }
 }
 
-function filterProducts() {
+async function filterProducts() {
   document.getElementById('search-input-mobile').value = document.getElementById('search-input').value;
+  if (document.getElementById('search-input').value.trim() !== '') {
+    await ensureFullCatalogLoaded();
+  }
   renderProducts();
 }
 
-function filterProductsMobile() {
+async function filterProductsMobile() {
   document.getElementById('search-input').value = document.getElementById('search-input-mobile').value;
+  if (document.getElementById('search-input-mobile').value.trim() !== '') {
+    await ensureFullCatalogLoaded();
+  }
   renderProducts();
 }
 
@@ -724,7 +774,7 @@ function openProductModal(id = null) {
 
   if (id) {
     document.getElementById('product-modal-title').innerText = 'Editar Perfume';
-    const p = perfumes.find(i => i.id === id);
+    const p = getSourceCatalog().find(i => i.id === id);
     if (p) {
       document.getElementById('edit-product-id').value = p.id;
       document.getElementById('prod-name').value = p.name;
@@ -805,7 +855,7 @@ function saveProduct(event) {
 
   const targetId = editId ? editId : 'p_' + Date.now();
   if (!mainImage && editId) { 
-    const found = perfumes.find(i => i.id === editId);
+    const found = getSourceCatalog().find(i => i.id === editId);
     if (found) mainImage = found.image;
   }
   if (!mainImage) { mainImage = 'https://placehold.co/400x400/141414/D4AF37?text=Perfume'; }
@@ -848,7 +898,7 @@ function saveProduct(event) {
 }
 
 function addToCartWithSelectedSize(id) {
-  const product = perfumes.find(i => i.id === id);
+  const product = getSourceCatalog().find(i => i.id === id);
   if (!product || product.status === 'agotado' || product.status === 'proximamente') return;
 
   let selectedSizeName = product.volume || 'Estándar';
