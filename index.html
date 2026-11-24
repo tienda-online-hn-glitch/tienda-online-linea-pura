@@ -102,6 +102,131 @@ input:-webkit-autofill:focus {
   0%, 100% { opacity: 0.45; transform: scale(0.95); }
   50% { opacity: 1; transform: scale(1.05); }
 }
+
+/* 1. Etiqueta 100% ORIGINAL: brillo tipo ola */
+.badge-original-wave {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+}
+.badge-original-wave::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -130%;
+  width: 75%;
+  height: 100%;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(167, 243, 208, 0.55) 50%,
+    transparent 100%
+  );
+  transform: skewX(-22deg);
+  animation: waveSweep 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes waveSweep {
+  0% { left: -130%; }
+  55%, 100% { left: 150%; }
+}
+
+/* 2. Insignia 🔥 Más Vendido: efecto tipo llamas */
+.badge-flame {
+  position: relative;
+  overflow: visible;
+  background: linear-gradient(135deg, #ff9a2e 0%, #ff4500 100%) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 200, 120, 0.75) !important;
+  animation: flameAura 1.7s ease-in-out infinite;
+}
+.badge-flame .flame-emoji {
+  display: inline-block;
+  transform-origin: bottom center;
+  animation: flameFlicker 0.95s ease-in-out infinite alternate;
+}
+@keyframes flameFlicker {
+  0% { transform: scale(1) rotate(-4deg); }
+  100% { transform: scale(1.18) rotate(5deg); }
+}
+@keyframes flameAura {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 94, 26, 0.45), 0 0 16px rgba(255, 38, 0, 0.22);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(255, 120, 30, 0.8), 0 0 26px rgba(255, 50, 0, 0.42);
+  }
+}
+
+/* 3. Insignia ✨ Novedad: brillitos */
+.badge-sparkles {
+  position: relative;
+  overflow: visible;
+  animation: novedadPulse 2.4s ease-in-out infinite;
+}
+.badge-sparkles .sparkle-icon {
+  display: inline-block;
+  animation: sparkleSpin 2s ease-in-out infinite;
+}
+.badge-sparkles::before,
+.badge-sparkles::after {
+  content: "✦";
+  position: absolute;
+  color: #FFF6D6;
+  pointer-events: none;
+  animation: tinySparkle 2.1s ease-in-out infinite;
+}
+.badge-sparkles::before {
+  top: -7px;
+  right: 2px;
+  font-size: 11px;
+  animation-delay: 0s;
+}
+.badge-sparkles::after {
+  bottom: -6px;
+  left: 4px;
+  font-size: 10px;
+  animation-delay: 1.05s;
+}
+@keyframes sparkleSpin {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.2) rotate(18deg); }
+}
+@keyframes tinySparkle {
+  0%, 100% { opacity: 0; transform: scale(0.4); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+@keyframes novedadPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(212, 175, 55, 0.35); }
+  50% { box-shadow: 0 0 14px rgba(243, 229, 171, 0.65); }
+}
+
+/* 4. Insignia 💎 Exclusivo: resplandor elegante */
+.badge-exclusive-glow {
+  position: relative;
+  overflow: visible;
+  background: linear-gradient(135deg, #F3E5AB 0%, #D4AF37 55%, #b68924 100%) !important;
+  color: #0B0B0B !important;
+  border-color: #FFF6D6 !important;
+  animation: exclusiveRadiance 2.5s ease-in-out infinite;
+}
+.badge-exclusive-glow .gem-icon {
+  display: inline-block;
+  animation: gemShimmer 2.5s ease-in-out infinite;
+}
+@keyframes exclusiveRadiance {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(243, 229, 171, 0.45), 0 0 22px rgba(212, 175, 55, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(255, 246, 214, 0.85), 0 0 34px rgba(212, 175, 55, 0.5);
+  }
+}
+@keyframes gemShimmer {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.14); filter: brightness(1.25); }
+}
 </style>
 </head>
 <body class="bg-darkBg min-h-screen text-gray-100 flex flex-col selection:bg-gold selection:text-black">
@@ -192,12 +317,29 @@ input:-webkit-autofill:focus {
     <p class="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base font-light mb-6">
       Selecciona tu marca favorita o explora nuestro catálogo completo. Tamaños múltiples con precios en Lempiras (L.) listos para ordenar vía WhatsApp.
     </p>
-    <div class="mt-6">
+    <div class="mt-6 text-left">
       <div class="flex items-center justify-between mb-2 px-1">
         <span class="text-xs font-cinzel text-gold tracking-widest uppercase">Filtrar por Marca</span>
-        <button onclick="setBrand('Todos')" id="clear-brand-btn" class="text-xs text-gray-400 hover:text-gold transition hidden">Ver Todas</button>
+        <button onclick="resetAllFilters()" id="clear-brand-btn" class="text-xs text-gray-400 hover:text-gold transition hidden">Ver Todas</button>
       </div>
       <div id="brand-filters" class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 px-1 scrollbar-thin"></div>
+
+      <!-- Insignias activas desde el inicio -->
+      <div class="mt-4 pt-3 border-t border-gold/10 flex flex-wrap items-center gap-3 px-1">
+        <span class="text-xs font-cinzel text-gold tracking-widest uppercase mr-1">Insignias:</span>
+        <button type="button" id="badge-filter-mas-vendido" onclick="toggleBadgeFilter('🔥 Más Vendido')"
+          class="badge-flame px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border transition cursor-pointer">
+          <span class="flame-emoji">🔥</span> Más Vendido
+        </button>
+        <button type="button" id="badge-filter-novedad" onclick="toggleBadgeFilter('✨ Novedad')"
+          class="badge-sparkles bg-gold/95 text-black px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border border-gold transition cursor-pointer">
+          <span class="sparkle-icon">✨</span> Novedad
+        </button>
+        <button type="button" id="badge-filter-exclusivo" onclick="toggleBadgeFilter('💎 Exclusivo')"
+          class="badge-exclusive-glow px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border transition cursor-pointer">
+          <span class="gem-icon">💎</span> Exclusivo
+        </button>
+      </div>
     </div>
   </div>
 </section>
@@ -429,6 +571,7 @@ let knownBrands = new Set();
 let cart = [];
 let isAdmin = false;
 let currentBrand = 'Todos';
+let currentBadge = '';
 let currentSearch = '';
 let adminPassword = 'Lineapura1010';
 let searchDebounceTimer = null;
@@ -444,6 +587,7 @@ let hayMasFiltrados = false;
 
 window.onload = function() {
   loadCartAndSettings();
+  updateBadgeButtonsUI();
   loadFromSupabase(true);
 };
 
@@ -528,7 +672,34 @@ function mapRawPerfumes(rows) {
 }
 
 function isFilterMode() {
-  return normalizeText(currentBrand).toLowerCase() !== 'todos' || normalizeText(currentSearch) !== '';
+  return (
+    normalizeText(currentBrand).toLowerCase() !== 'todos' ||
+    normalizeText(currentBadge) !== '' ||
+    normalizeText(currentSearch) !== ''
+  );
+}
+
+function updateBadgeButtonsUI() {
+  const map = [
+    { id: 'badge-filter-mas-vendido', badge: '🔥 Más Vendido' },
+    { id: 'badge-filter-novedad', badge: '✨ Novedad' },
+    { id: 'badge-filter-exclusivo', badge: '💎 Exclusivo' }
+  ];
+
+  map.forEach(({ id, badge }) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const active = currentBadge === badge;
+    el.classList.toggle('ring-2', active);
+    el.classList.toggle('ring-white', active);
+    el.classList.toggle('scale-105', active);
+    el.classList.toggle('opacity-75', currentBadge !== '' && !active);
+  });
+
+  const clearBtn = document.getElementById('clear-brand-btn');
+  if (clearBtn) {
+    clearBtn.classList.toggle('hidden', currentBrand === 'Todos' && currentBadge === '');
+  }
 }
 
 function showLoadingIndicator() {
@@ -552,8 +723,23 @@ async function reiniciarYRecargar() {
   hayMasRegistros = true;
   hayMasFiltrados = false;
   currentBrand = 'Todos';
+  currentBadge = '';
+  updateBadgeButtonsUI();
   syncSearchInputs('');
   await loadFromSupabase(true);
+}
+
+async function resetAllFilters() {
+  clearTimeout(searchDebounceTimer);
+  currentBrand = 'Todos';
+  currentBadge = '';
+  syncSearchInputs('');
+  updateBadgeButtonsUI();
+  renderBrandFilters();
+  activeRequestToken++;
+  filteredPerfumes = [];
+  document.getElementById('loading-state').classList.add('hidden');
+  renderProducts();
 }
 
 async function loadFromSupabase(reset = false) {
@@ -601,12 +787,13 @@ async function loadFromSupabase(reset = false) {
 
   loadingState.classList.add('hidden');
   renderBrandFilters();
+  updateBadgeButtonsUI();
   renderProducts();
   updateCartUI();
   updateBrandsDatalist();
 }
 
-async function fetchMatchingFromSupabase(brandFilter, searchFilter, reset = true) {
+async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter = '', reset = true) {
   const loadingState = document.getElementById('loading-state');
   const emptyState = document.getElementById('empty-state');
   const token = ++activeRequestToken;
@@ -624,11 +811,12 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, reset = true
   try {
     const cleanBrand = normalizeText(brandFilter);
     const cleanSearch = normalizeText(searchFilter);
+    const cleanBadge = normalizeText(badgeFilter);
     const hasBrand = cleanBrand && cleanBrand.toLowerCase() !== 'todos';
 
     let rows = [];
 
-    if (cleanSearch && !hasBrand) {
+    if (cleanSearch && !hasBrand && !cleanBadge) {
       const [resBrand, resName] = await Promise.all([
         _supabase
           .from('perfumes')
@@ -672,7 +860,11 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, reset = true
         query = query.ilike('brand', `%${cleanBrand}%`);
       }
 
-      if (cleanSearch) {
+      if (cleanBadge && cleanSearch) {
+        query = query.ilike('name', `%${cleanBadge}%`).ilike('name', `%${cleanSearch}%`);
+      } else if (cleanBadge) {
+        query = query.ilike('name', `%[${cleanBadge}]%`);
+      } else if (cleanSearch) {
         query = query.ilike('name', `%${cleanSearch}%`);
       }
 
@@ -703,13 +895,30 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, reset = true
   loadingState.classList.add('hidden');
   emptyState.classList.add('hidden');
   renderBrandFilters();
+  updateBadgeButtonsUI();
   renderProducts();
+}
+
+async function toggleBadgeFilter(badge) {
+  clearTimeout(searchDebounceTimer);
+  currentBadge = currentBadge === badge ? '' : badge;
+  updateBadgeButtonsUI();
+
+  if (!isFilterMode()) {
+    activeRequestToken++;
+    filteredPerfumes = [];
+    document.getElementById('loading-state').classList.add('hidden');
+    renderProducts();
+    return;
+  }
+
+  await fetchMatchingFromSupabase(currentBrand, currentSearch, currentBadge, true);
 }
 
 async function cargarMasPerfumes() {
   if (isFilterMode()) {
     paginaFiltrada++;
-    await fetchMatchingFromSupabase(currentBrand, currentSearch, false);
+    await fetchMatchingFromSupabase(currentBrand, currentSearch, currentBadge, false);
   } else {
     paginaActual++;
     await loadFromSupabase(false);
@@ -756,9 +965,8 @@ function getBrands() {
 
 function renderBrandFilters() {
   const container = document.getElementById('brand-filters');
-  const clearBtn = document.getElementById('clear-brand-btn');
   const brands = getBrands();
-  clearBtn.classList.toggle('hidden', currentBrand === 'Todos');
+  updateBadgeButtonsUI();
   container.innerHTML = brands.map(brand => {
     const encodedBrand = encodeURIComponent(brand);
     const isActive = normalizeText(currentBrand).toLowerCase() === normalizeText(brand).toLowerCase();
@@ -784,7 +992,7 @@ async function setBrand(brand) {
     return;
   }
 
-  await fetchMatchingFromSupabase(currentBrand, '', true);
+  await fetchMatchingFromSupabase(currentBrand, '', currentBadge, true);
 }
 
 function updateBrandsDatalist() {
@@ -841,7 +1049,13 @@ function renderProducts() {
     const initialImage = (sizes.length > 0 && sizes[0].image) ? sizes[0].image : (p.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume');
 
     let customBadgeHTML = '';
-    if (p.badge) {
+    if (p.badge === '🔥 Más Vendido') {
+      customBadgeHTML = `<div class="badge-flame absolute top-3 right-3 z-10 border px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-md"><span class="flame-emoji">🔥</span> Más Vendido</div>`;
+    } else if (p.badge === '✨ Novedad') {
+      customBadgeHTML = `<div class="badge-sparkles absolute top-3 right-3 z-10 bg-gold/95 text-black font-bold border border-gold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider shadow-md"><span class="sparkle-icon">✨</span> Novedad</div>`;
+    } else if (p.badge === '💎 Exclusivo') {
+      customBadgeHTML = `<div class="badge-exclusive-glow absolute top-3 right-3 z-10 border px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-md"><span class="gem-icon">💎</span> Exclusivo</div>`;
+    } else if (p.badge) {
       customBadgeHTML = `<div class="absolute top-3 right-3 z-10 bg-gold/90 text-black font-bold border border-gold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider shadow-md">${p.badge}</div>`;
     }
 
@@ -885,7 +1099,7 @@ function renderProducts() {
         <div class="p-5 flex-1 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <span class="text-[11px] font-semibold text-emerald-400 tracking-wide bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-check mr-1"></i>100% ORIGINAL</span>
+              <span class="badge-original-wave text-[11px] font-semibold text-emerald-400 tracking-wide bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-check mr-1"></i>100% ORIGINAL</span>
             </div>
             <h4 class="font-cinzel text-base font-bold text-white mb-1 leading-snug">${p.name}</h4>
             <div id="price-display-${p.id}" class="font-cinzel text-lg font-bold text-gold mb-4">L. ${parseFloat(initialPrice).toFixed(2)}</div>
@@ -925,12 +1139,12 @@ function scheduleSearchQuery(immediate = false) {
   showLoadingIndicator();
 
   if (immediate) {
-    fetchMatchingFromSupabase('Todos', cleanSearch, true);
+    fetchMatchingFromSupabase('Todos', cleanSearch, currentBadge, true);
     return;
   }
 
   searchDebounceTimer = setTimeout(async () => {
-    await fetchMatchingFromSupabase('Todos', cleanSearch, true);
+    await fetchMatchingFromSupabase('Todos', cleanSearch, currentBadge, true);
   }, 250);
 }
 
@@ -961,19 +1175,19 @@ function submitSearch(event, source) {
 function clearSearch() {
   clearTimeout(searchDebounceTimer);
   syncSearchInputs('');
-  if (currentBrand === 'Todos') {
+  if (!isFilterMode()) {
     activeRequestToken++;
     filteredPerfumes = [];
     document.getElementById('loading-state').classList.add('hidden');
     renderProducts();
   } else {
-    fetchMatchingFromSupabase(currentBrand, '', true);
+    fetchMatchingFromSupabase(currentBrand, '', currentBadge, true);
   }
 }
 
 function handleLogoClick() {
   if (isAdmin) {
-    setBrand('Todos');
+    resetAllFilters();
   } else {
     document.getElementById('password-modal').classList.remove('hidden');
     document.getElementById('admin-pass-input').value = '';
