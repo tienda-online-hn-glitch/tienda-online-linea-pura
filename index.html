@@ -608,6 +608,14 @@ function normalizeText(str) {
   return String(str || '').replace(/\s+/g, ' ').trim();
 }
 
+function getBadgeKeyword(badge) {
+  if (!badge) return '';
+  if (badge.includes('Más Vendido')) return 'Más Vendido';
+  if (badge.includes('Novedad')) return 'Novedad';
+  if (badge.includes('Exclusivo')) return 'Exclusivo';
+  return normalizeText(badge);
+}
+
 function syncSearchInputs(val) {
   currentSearch = val;
   const desktopEl = document.getElementById('search-input');
@@ -642,14 +650,14 @@ function mapRawPerfumes(rows) {
     let cleanName = rawName;
     let itemBadge = '';
 
-    if (rawName.includes(' [🔥 Más Vendido]')) {
-      cleanName = rawName.replace(' [🔥 Más Vendido]', '');
+    if (/más vendido/i.test(rawName)) {
+      cleanName = rawName.replace(/\s*\[?\s*🔥?\s*Más Vendido\s*\]?/i, '').trim();
       itemBadge = '🔥 Más Vendido';
-    } else if (rawName.includes(' [✨ Novedad]')) {
-      cleanName = rawName.replace(' [✨ Novedad]', '');
+    } else if (/novedad/i.test(rawName)) {
+      cleanName = rawName.replace(/\s*\[?\s*✨?\s*Novedad\s*\]?/i, '').trim();
       itemBadge = '✨ Novedad';
-    } else if (rawName.includes(' [💎 Exclusivo]')) {
-      cleanName = rawName.replace(' [💎 Exclusivo]', '');
+    } else if (/exclusivo/i.test(rawName)) {
+      cleanName = rawName.replace(/\s*\[?\s*💎?\s*Exclusivo\s*\]?/i, '').trim();
       itemBadge = '💎 Exclusivo';
     }
 
@@ -668,6 +676,22 @@ function mapRawPerfumes(rows) {
       image: item.image || 'https://placehold.co/400x400/141414/D4AF37?text=Perfume',
       sizes: parsedSizes
     };
+  });
+}
+
+function filterLocalPerfumes(brandFilter, searchFilter, badgeFilter) {
+  const cleanBrand = normalizeText(brandFilter).toLowerCase();
+  const cleanSearch = normalizeText(searchFilter).toLowerCase();
+  const badgeKeyword = getBadgeKeyword(badgeFilter).toLowerCase();
+
+  return perfumes.filter(p => {
+    const matchesBrand = !cleanBrand || cleanBrand === 'todos' || normalizeText(p.brand).toLowerCase() === cleanBrand;
+    const matchesBadge = !badgeKeyword || normalizeText(p.badge).toLowerCase().includes(badgeKeyword) || normalizeText(p.rawFullName).toLowerCase().includes(badgeKeyword);
+    const matchesSearch = !cleanSearch ||
+      normalizeText(p.name).toLowerCase().includes(cleanSearch) ||
+      normalizeText(p.brand).toLowerCase().includes(cleanSearch) ||
+      normalizeText(p.rawFullName).toLowerCase().includes(cleanSearch);
+    return matchesBrand && matchesBadge && matchesSearch;
   });
 }
 
@@ -811,12 +835,12 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter 
   try {
     const cleanBrand = normalizeText(brandFilter);
     const cleanSearch = normalizeText(searchFilter);
-    const cleanBadge = normalizeText(badgeFilter);
+    const badgeKeyword = getBadgeKeyword(badgeFilter);
     const hasBrand = cleanBrand && cleanBrand.toLowerCase() !== 'todos';
 
     let rows = [];
 
-    if (cleanSearch && !hasBrand && !cleanBadge) {
+    if (cleanSearch && !hasBrand && !badgeKeyword) {
       const [resBrand, resName] = await Promise.all([
         _supabase
           .from('perfumes')
@@ -860,10 +884,10 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter 
         query = query.ilike('brand', `%${cleanBrand}%`);
       }
 
-      if (cleanBadge && cleanSearch) {
-        query = query.ilike('name', `%${cleanBadge}%`).ilike('name', `%${cleanSearch}%`);
-      } else if (cleanBadge) {
-        query = query.ilike('name', `%[${cleanBadge}]%`);
+      if (badgeKeyword && cleanSearch) {
+        query = query.ilike('name', `%${badgeKeyword}%`).ilike('name', `%${cleanSearch}%`);
+      } else if (badgeKeyword) {
+        query = query.ilike('name', `%${badgeKeyword}%`);
       } else if (cleanSearch) {
         query = query.ilike('name', `%${cleanSearch}%`);
       }
@@ -877,7 +901,16 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter 
       hayMasFiltrados = rows.length === tamanoPagina;
     }
 
-    const mapped = mapRawPerfumes(rows);
+    let mapped = mapRawPerfumes(rows);
+
+    if (mapped.length === 0 && reset && perfumes.length > 0) {
+      const localMatches = filterLocalPerfumes(cleanBrand, cleanSearch, badgeKeyword);
+      if (localMatches.length > 0) {
+        mapped = localMatches;
+        hayMasFiltrados = false;
+      }
+    }
+
     if (reset) {
       filteredPerfumes = mapped;
     } else {
@@ -887,9 +920,15 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter 
   } catch (err) {
     if (token !== activeRequestToken) return;
     console.error("Error buscando en Supabase:", err);
-    showToast('Error al buscar fragancias', 'error');
-    if (reset) filteredPerfumes = [];
-    hayMasFiltrados = false;
+    const localFallback = reset ? filterLocalPerfumes(brandFilter, searchFilter, badgeFilter) : [];
+    if (localFallback.length > 0) {
+      filteredPerfumes = localFallback;
+      hayMasFiltrados = false;
+    } else {
+      showToast('Error al buscar fragancias', 'error');
+      if (reset) filteredPerfumes = [];
+      hayMasFiltrados = false;
+    }
   }
 
   loadingState.classList.add('hidden');
