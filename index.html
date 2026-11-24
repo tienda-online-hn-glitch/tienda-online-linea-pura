@@ -567,7 +567,7 @@ const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let perfumes = [];
 let filteredPerfumes = [];
-let knownBrands = new Set();
+let knownBrands = new Map();
 let cart = [];
 let isAdmin = false;
 let currentBrand = 'Todos';
@@ -617,6 +617,34 @@ function normalizeFilterText(str) {
     .trim();
 }
 
+function stripBadgeTag(str) {
+  return normalizeText(
+    String(str || '')
+      .replace(/\s*\[?\s*🔥?\s*Más Vendido\s*\]?/gi, '')
+      .replace(/\s*\[?\s*✨?\s*Novedad\s*\]?/gi, '')
+      .replace(/\s*\[?\s*💎?\s*Exclusivo\s*\]?/gi, '')
+  );
+}
+
+function detectBadgeFromText(str) {
+  const text = String(str || '');
+  if (/m[aá]s vendido/i.test(text)) return '🔥 Más Vendido';
+  if (/novedad/i.test(text)) return '✨ Novedad';
+  if (/exclusivo/i.test(text)) return '💎 Exclusivo';
+  return '';
+}
+
+function registerKnownBrand(brandName) {
+  const cleaned = stripBadgeTag(brandName);
+  if (!cleaned) return 'Línea Pura';
+  const key = normalizeFilterText(cleaned);
+  if (!key || key === 'todos') return cleaned;
+  if (!knownBrands.has(key)) {
+    knownBrands.set(key, cleaned);
+  }
+  return knownBrands.get(key);
+}
+
 function getBadgeKeyword(badge) {
   if (!badge) return '';
   if (badge.includes('Más Vendido')) return 'Más Vendido';
@@ -655,28 +683,16 @@ function mapRawPerfumes(rows) {
       parsedSizes = [{ name: item.volume, price: item.price, image: item.image }];
     }
 
-    let rawName = item.name || 'Sin nombre';
-    let cleanName = rawName;
-    let itemBadge = '';
-
-    if (/más vendido/i.test(rawName)) {
-      cleanName = rawName.replace(/\s*\[?\s*🔥?\s*Más Vendido\s*\]?/i, '').trim();
-      itemBadge = '🔥 Más Vendido';
-    } else if (/novedad/i.test(rawName)) {
-      cleanName = rawName.replace(/\s*\[?\s*✨?\s*Novedad\s*\]?/i, '').trim();
-      itemBadge = '✨ Novedad';
-    } else if (/exclusivo/i.test(rawName)) {
-      cleanName = rawName.replace(/\s*\[?\s*💎?\s*Exclusivo\s*\]?/i, '').trim();
-      itemBadge = '💎 Exclusivo';
-    }
-
-    const cleanBrand = normalizeText(item.brand) || 'Línea Pura';
-    if (cleanBrand) knownBrands.add(cleanBrand);
+    const rawName = item.name || 'Sin nombre';
+    const rawBrand = item.brand || 'Línea Pura';
+    const cleanName = stripBadgeTag(rawName) || 'Sin nombre';
+    const itemBadge = detectBadgeFromText(rawName) || detectBadgeFromText(rawBrand);
+    const cleanBrand = registerKnownBrand(rawBrand);
 
     return {
       id: item.id || 'p_' + Math.random(),
-      name: normalizeText(cleanName),
-      rawFullName: rawName,
+      name: cleanName,
+      rawFullName: `${rawName} ${rawBrand}`,
       brand: cleanBrand,
       status: item.status || 'disponible',
       badge: itemBadge,
@@ -689,7 +705,7 @@ function mapRawPerfumes(rows) {
 }
 
 function filterLocalPerfumes(brandFilter, searchFilter, badgeFilter) {
-  const cleanBrand = normalizeFilterText(brandFilter);
+  const cleanBrand = normalizeFilterText(stripBadgeTag(brandFilter));
   const cleanSearch = normalizeFilterText(searchFilter);
   const badgeKeyword = normalizeFilterText(getBadgeKeyword(badgeFilter));
 
@@ -722,7 +738,7 @@ function filterLocalPerfumes(brandFilter, searchFilter, badgeFilter) {
 
 function isFilterMode() {
   return (
-    normalizeText(currentBrand).toLowerCase() !== 'todos' ||
+    normalizeFilterText(currentBrand) !== 'todos' ||
     normalizeText(currentBadge) !== '' ||
     normalizeText(currentSearch) !== ''
   );
@@ -747,7 +763,7 @@ function updateBadgeButtonsUI() {
 
   const clearBtn = document.getElementById('clear-brand-btn');
   if (clearBtn) {
-    clearBtn.classList.toggle('hidden', currentBrand === 'Todos' && currentBadge === '');
+    clearBtn.classList.toggle('hidden', normalizeFilterText(currentBrand) === 'todos' && currentBadge === '');
   }
 }
 
@@ -824,7 +840,9 @@ async function loadFromSupabase(reset = false) {
       if (reset) {
         perfumes = nuevosItems;
       } else {
-        perfumes = [...perfumes, ...nuevosItems];
+        const merged = new Map(perfumes.map(item => [String(item.id), item]));
+        nuevosItems.forEach(item => merged.set(String(item.id), item));
+        perfumes = Array.from(merged.values());
       }
 
       showToast(`¡Catálogo sincronizado!`, 'success');
@@ -855,7 +873,7 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter 
   }
 
   try {
-    const cleanBrand = normalizeText(brandFilter);
+    const cleanBrand = stripBadgeTag(brandFilter);
     const cleanSearch = normalizeText(searchFilter);
     const badgeKeyword = getBadgeKeyword(badgeFilter);
     const hasBrand = cleanBrand && normalizeFilterText(cleanBrand) !== 'todos';
@@ -868,7 +886,7 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter 
       query = query.ilike('brand', `%${cleanBrand}%`);
     }
     if (badgeKeyword) {
-      query = query.ilike('name', `%${badgeKeyword}%`);
+      query = query.or(`name.ilike.%${badgeKeyword}%,brand.ilike.%${badgeKeyword}%`);
     }
     if (cleanSearch && !hasBrand && !badgeKeyword) {
       query = query.or(`name.ilike.%${cleanSearch}%,brand.ilike.%${cleanSearch}%`);
@@ -913,7 +931,16 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter 
 
 async function toggleBadgeFilter(badge) {
   clearTimeout(searchDebounceTimer);
-  currentBadge = currentBadge === badge ? '' : badge;
+  const willActivate = currentBadge !== badge;
+  currentBadge = willActivate ? badge : '';
+
+  // Al activar una insignia, limpiamos marca y búsqueda para mostrar esa insignia en todo el catálogo
+  if (willActivate) {
+    currentBrand = 'Todos';
+    syncSearchInputs('');
+    renderBrandFilters();
+  }
+
   updateBadgeButtonsUI();
 
   if (!isFilterMode()) {
@@ -971,8 +998,13 @@ async function deleteFromSupabase(id) {
 }
 
 function getBrands() {
-  const brandsSet = new Set([...knownBrands, ...perfumes.map(p => (p.brand || '').trim()).filter(b => b !== '')]);
-  return ['Todos', ...Array.from(brandsSet).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))];
+  perfumes.forEach(p => {
+    if (p.brand) registerKnownBrand(p.brand);
+  });
+  const sortedBrands = Array.from(knownBrands.values()).sort((a, b) =>
+    a.localeCompare(b, 'es', { sensitivity: 'base' })
+  );
+  return ['Todos', ...sortedBrands];
 }
 
 function renderBrandFilters() {
@@ -981,7 +1013,7 @@ function renderBrandFilters() {
   updateBadgeButtonsUI();
   container.innerHTML = brands.map(brand => {
     const encodedBrand = encodeURIComponent(brand);
-    const isActive = normalizeText(currentBrand).toLowerCase() === normalizeText(brand).toLowerCase();
+    const isActive = normalizeFilterText(currentBrand) === normalizeFilterText(brand);
     return `
       <button onclick="setBrand(decodeURIComponent('${encodedBrand}'))" class="whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition ${isActive ? 'gold-bg text-black font-semibold shadow-md' : 'bg-cardBg border border-gold/30 text-gray-300 hover:border-gold'}">
         ${brand}
@@ -993,7 +1025,10 @@ function renderBrandFilters() {
 async function setBrand(brand) {
   clearTimeout(searchDebounceTimer);
   syncSearchInputs('');
-  currentBrand = normalizeText(brand) || 'Todos';
+  // Al elegir una marca, apagamos cualquier insignia previa para que la marca abra completa
+  currentBadge = '';
+  currentBrand = stripBadgeTag(brand) || 'Todos';
+  updateBadgeButtonsUI();
   renderBrandFilters();
 
   if (!isFilterMode()) {
@@ -1004,12 +1039,14 @@ async function setBrand(brand) {
     return;
   }
 
-  await fetchMatchingFromSupabase(currentBrand, '', currentBadge, true);
+  await fetchMatchingFromSupabase(currentBrand, '', '', true);
 }
 
 function updateBrandsDatalist() {
   const datalist = document.getElementById('brands-datalist');
-  const brands = Array.from(new Set([...knownBrands, ...perfumes.map(p => (p.brand || '').trim()).filter(b => b !== '')])).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  const brands = Array.from(knownBrands.values()).sort((a, b) =>
+    a.localeCompare(b, 'es', { sensitivity: 'base' })
+  );
   datalist.innerHTML = brands.map(b => `<option value="${b}">`).join('');
 }
 
@@ -1135,8 +1172,10 @@ function scheduleSearchQuery(immediate = false) {
 
   const cleanSearch = normalizeText(currentSearch);
 
-  if (cleanSearch !== '' && currentBrand !== 'Todos') {
+  if (cleanSearch !== '' && (normalizeFilterText(currentBrand) !== 'todos' || currentBadge !== '')) {
     currentBrand = 'Todos';
+    currentBadge = '';
+    updateBadgeButtonsUI();
     renderBrandFilters();
   }
 
@@ -1348,8 +1387,8 @@ function compressAndPreview(event, targetInputId) {
 function saveProduct(event) {
   event.preventDefault();
   const editId = document.getElementById('edit-product-id').value;
-  let name = normalizeText(document.getElementById('prod-name').value);
-  const brand = normalizeText(document.getElementById('prod-brand').value);
+  let name = stripBadgeTag(document.getElementById('prod-name').value);
+  const brand = stripBadgeTag(document.getElementById('prod-brand').value);
   const status = document.getElementById('prod-status').value;
   const badge = document.getElementById('prod-badge').value;
   let mainImage = document.getElementById('prod-img-base64').value;
