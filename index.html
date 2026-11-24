@@ -860,38 +860,42 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter 
     const badgeKeyword = getBadgeKeyword(badgeFilter);
     const hasBrand = cleanBrand && normalizeFilterText(cleanBrand) !== 'todos';
 
-    let results = filterLocalPerfumes(cleanBrand, cleanSearch, badgeKeyword);
+    let query = _supabase
+      .from('perfumes')
+      .select('id, name, brand, status, volume, price, image, sizes');
 
-    if (results.length === 0) {
-      let query = _supabase
-        .from('perfumes')
-        .select('id, name, brand, status, volume, price, image, sizes');
+    if (hasBrand) {
+      query = query.ilike('brand', `%${cleanBrand}%`);
+    }
+    if (badgeKeyword) {
+      query = query.ilike('name', `%${badgeKeyword}%`);
+    }
+    if (cleanSearch && !hasBrand && !badgeKeyword) {
+      query = query.or(`name.ilike.%${cleanSearch}%,brand.ilike.%${cleanSearch}%`);
+    } else if (cleanSearch) {
+      query = query.ilike('name', `%${cleanSearch}%`);
+    }
 
-      if (hasBrand) {
-        query = query.ilike('brand', `%${cleanBrand}%`);
-      }
-      if (badgeKeyword) {
-        query = query.ilike('name', `%${badgeKeyword}%`);
-      }
-      if (cleanSearch && !hasBrand && !badgeKeyword) {
-        query = query.or(`name.ilike.%${cleanSearch}%,brand.ilike.%${cleanSearch}%`);
-      } else if (cleanSearch) {
-        query = query.ilike('name', `%${cleanSearch}%`);
-      }
+    const { data, error } = await query.limit(500);
+    if (token !== activeRequestToken) return;
 
-      const { data, error } = await query.limit(200);
-      if (token !== activeRequestToken) return;
+    if (!error && Array.isArray(data)) {
+      const remoteMapped = mapRawPerfumes(data);
+      const mergedMap = new Map();
 
-      if (!error && Array.isArray(data)) {
-        const remoteMapped = mapRawPerfumes(data);
-        const existingIds = new Set(perfumes.map(item => item.id));
-        perfumes = [...perfumes, ...remoteMapped.filter(item => !existingIds.has(item.id))];
-        results = filterLocalPerfumes(cleanBrand, cleanSearch, badgeKeyword);
-      }
+      remoteMapped.forEach(item => mergedMap.set(String(item.id), item));
+      perfumes.forEach(item => {
+        if (!mergedMap.has(String(item.id))) {
+          mergedMap.set(String(item.id), item);
+        }
+      });
+
+      perfumes = Array.from(mergedMap.values());
     }
 
     if (token !== activeRequestToken) return;
-    filteredPerfumes = results;
+
+    filteredPerfumes = filterLocalPerfumes(cleanBrand, cleanSearch, badgeKeyword);
     hayMasFiltrados = false;
   } catch (err) {
     if (token !== activeRequestToken) return;
