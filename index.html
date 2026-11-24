@@ -608,6 +608,15 @@ function normalizeText(str) {
   return String(str || '').replace(/\s+/g, ' ').trim();
 }
 
+function normalizeFilterText(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function getBadgeKeyword(badge) {
   if (!badge) return '';
   if (badge.includes('Más Vendido')) return 'Más Vendido';
@@ -680,17 +689,33 @@ function mapRawPerfumes(rows) {
 }
 
 function filterLocalPerfumes(brandFilter, searchFilter, badgeFilter) {
-  const cleanBrand = normalizeText(brandFilter).toLowerCase();
-  const cleanSearch = normalizeText(searchFilter).toLowerCase();
-  const badgeKeyword = getBadgeKeyword(badgeFilter).toLowerCase();
+  const cleanBrand = normalizeFilterText(brandFilter);
+  const cleanSearch = normalizeFilterText(searchFilter);
+  const badgeKeyword = normalizeFilterText(getBadgeKeyword(badgeFilter));
 
   return perfumes.filter(p => {
-    const matchesBrand = !cleanBrand || cleanBrand === 'todos' || normalizeText(p.brand).toLowerCase() === cleanBrand;
-    const matchesBadge = !badgeKeyword || normalizeText(p.badge).toLowerCase().includes(badgeKeyword) || normalizeText(p.rawFullName).toLowerCase().includes(badgeKeyword);
-    const matchesSearch = !cleanSearch ||
-      normalizeText(p.name).toLowerCase().includes(cleanSearch) ||
-      normalizeText(p.brand).toLowerCase().includes(cleanSearch) ||
-      normalizeText(p.rawFullName).toLowerCase().includes(cleanSearch);
+    const pBrand = normalizeFilterText(p.brand);
+    const pBadge = normalizeFilterText(p.badge);
+    const pName = normalizeFilterText(p.name);
+    const pRaw = normalizeFilterText(p.rawFullName);
+
+    const matchesBrand =
+      !cleanBrand ||
+      cleanBrand === 'todos' ||
+      pBrand === cleanBrand ||
+      pBrand.includes(cleanBrand);
+
+    const matchesBadge =
+      !badgeKeyword ||
+      pBadge.includes(badgeKeyword) ||
+      pRaw.includes(badgeKeyword);
+
+    const matchesSearch =
+      !cleanSearch ||
+      pName.includes(cleanSearch) ||
+      pBrand.includes(cleanSearch) ||
+      pRaw.includes(cleanSearch);
+
     return matchesBrand && matchesBadge && matchesSearch;
   });
 }
@@ -825,114 +850,58 @@ async function fetchMatchingFromSupabase(brandFilter, searchFilter, badgeFilter 
   if (reset) {
     paginaFiltrada = 0;
     filteredPerfumes = [];
-    hayMasFiltrados = true;
+    hayMasFiltrados = false;
     showLoadingIndicator();
   }
-
-  const inicio = paginaFiltrada * tamanoPagina;
-  const fin = inicio + tamanoPagina - 1;
 
   try {
     const cleanBrand = normalizeText(brandFilter);
     const cleanSearch = normalizeText(searchFilter);
     const badgeKeyword = getBadgeKeyword(badgeFilter);
-    const hasBrand = cleanBrand && cleanBrand.toLowerCase() !== 'todos';
+    const hasBrand = cleanBrand && normalizeFilterText(cleanBrand) !== 'todos';
 
-    let rows = [];
+    let results = filterLocalPerfumes(cleanBrand, cleanSearch, badgeKeyword);
 
-    if (cleanSearch && !hasBrand && !badgeKeyword) {
-      const [resBrand, resName] = await Promise.all([
-        _supabase
-          .from('perfumes')
-          .select('id, name, brand, status, volume, price, image, sizes')
-          .ilike('brand', `%${cleanSearch}%`)
-          .order('id', { ascending: false })
-          .range(inicio, fin),
-        _supabase
-          .from('perfumes')
-          .select('id, name, brand, status, volume, price, image, sizes')
-          .ilike('name', `%${cleanSearch}%`)
-          .order('id', { ascending: false })
-          .range(inicio, fin)
-      ]);
-
-      if (token !== activeRequestToken) return;
-
-      if (resBrand.error && resName.error) {
-        throw resBrand.error;
-      }
-
-      const seenIds = new Set(filteredPerfumes.map(p => p.id));
-      const combined = [...(resBrand.data || []), ...(resName.data || [])];
-      for (const row of combined) {
-        if (!seenIds.has(row.id)) {
-          seenIds.add(row.id);
-          rows.push(row);
-        }
-      }
-
-      const brandCount = (resBrand.data || []).length;
-      const nameCount = (resName.data || []).length;
-      hayMasFiltrados = brandCount === tamanoPagina || nameCount === tamanoPagina;
-    } else {
+    if (results.length === 0) {
       let query = _supabase
         .from('perfumes')
-        .select('id, name, brand, status, volume, price, image, sizes')
-        .order('id', { ascending: false });
+        .select('id, name, brand, status, volume, price, image, sizes');
 
       if (hasBrand) {
         query = query.ilike('brand', `%${cleanBrand}%`);
       }
-
-      if (badgeKeyword && cleanSearch) {
-        query = query.ilike('name', `%${badgeKeyword}%`).ilike('name', `%${cleanSearch}%`);
-      } else if (badgeKeyword) {
+      if (badgeKeyword) {
         query = query.ilike('name', `%${badgeKeyword}%`);
+      }
+      if (cleanSearch && !hasBrand && !badgeKeyword) {
+        query = query.or(`name.ilike.%${cleanSearch}%,brand.ilike.%${cleanSearch}%`);
       } else if (cleanSearch) {
         query = query.ilike('name', `%${cleanSearch}%`);
       }
 
-      const { data, error } = await query.range(inicio, fin);
-
+      const { data, error } = await query.limit(200);
       if (token !== activeRequestToken) return;
-      if (error) throw error;
 
-      rows = data || [];
-      hayMasFiltrados = rows.length === tamanoPagina;
-    }
-
-    let mapped = mapRawPerfumes(rows);
-
-    if (mapped.length === 0 && reset && perfumes.length > 0) {
-      const localMatches = filterLocalPerfumes(cleanBrand, cleanSearch, badgeKeyword);
-      if (localMatches.length > 0) {
-        mapped = localMatches;
-        hayMasFiltrados = false;
+      if (!error && Array.isArray(data)) {
+        const remoteMapped = mapRawPerfumes(data);
+        const existingIds = new Set(perfumes.map(item => item.id));
+        perfumes = [...perfumes, ...remoteMapped.filter(item => !existingIds.has(item.id))];
+        results = filterLocalPerfumes(cleanBrand, cleanSearch, badgeKeyword);
       }
     }
 
-    if (reset) {
-      filteredPerfumes = mapped;
-    } else {
-      const existingIds = new Set(filteredPerfumes.map(p => p.id));
-      filteredPerfumes = [...filteredPerfumes, ...mapped.filter(p => !existingIds.has(p.id))];
-    }
+    if (token !== activeRequestToken) return;
+    filteredPerfumes = results;
+    hayMasFiltrados = false;
   } catch (err) {
     if (token !== activeRequestToken) return;
-    console.error("Error buscando en Supabase:", err);
-    const localFallback = reset ? filterLocalPerfumes(brandFilter, searchFilter, badgeFilter) : [];
-    if (localFallback.length > 0) {
-      filteredPerfumes = localFallback;
-      hayMasFiltrados = false;
-    } else {
-      showToast('Error al buscar fragancias', 'error');
-      if (reset) filteredPerfumes = [];
-      hayMasFiltrados = false;
-    }
+    console.error("Error al filtrar:", err);
+    filteredPerfumes = filterLocalPerfumes(brandFilter, searchFilter, badgeFilter);
+    hayMasFiltrados = false;
   }
 
-  loadingState.classList.add('hidden');
-  emptyState.classList.add('hidden');
+  if (loadingState) loadingState.classList.add('hidden');
+  if (emptyState) emptyState.classList.add('hidden');
   renderBrandFilters();
   updateBadgeButtonsUI();
   renderProducts();
