@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LÍNEA PURA - Catálogo de Perfumes Exclusivos</title>
+<meta name="description" content="Catálogo oficial de perfumes exclusivos en Honduras. Pide fácil por WhatsApp.">
+<meta property="og:title" content="LÍNEA PURA - Catálogo de Perfumes Exclusivos" />
+<meta property="og:description" content="Catálogo oficial de perfumes exclusivos en Honduras. Pide fácil por WhatsApp." />
+<meta property="og:image" content="https://tienda-online-hn-glitch.github.io/tienda-online-linea-pura/portada.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1024" />
+<meta property="og:image:height" content="1024" />
+<meta property="og:url" content="https://tienda-online-hn-glitch.github.io/tienda-online-linea-pura/" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://tienda-online-hn-glitch.github.io/tienda-online-linea-pura/portada.png" />
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -934,7 +945,6 @@ async function toggleBadgeFilter(badge) {
   const willActivate = currentBadge !== badge;
   currentBadge = willActivate ? badge : '';
 
-  // Al activar una insignia, limpiamos marca y búsqueda para mostrar esa insignia en todo el catálogo
   if (willActivate) {
     currentBrand = 'Todos';
     syncSearchInputs('');
@@ -1025,7 +1035,6 @@ function renderBrandFilters() {
 async function setBrand(brand) {
   clearTimeout(searchDebounceTimer);
   syncSearchInputs('');
-  // Al elegir una marca, apagamos cualquier insignia previa para que la marca abra completa
   currentBadge = '';
   currentBrand = stripBadgeTag(brand) || 'Todos';
   updateBadgeButtonsUI();
