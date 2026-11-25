@@ -1577,7 +1577,7 @@ function updateCartUI() {
 
 function checkoutWhatsApp() {
   if (cart.length === 0) { showToast('El carrito está vacío', 'error'); return; }
-  let msg = "¡Hola! ✨️Tienda Online HN - LINEA PURA✨️ \nMe gustaría realizar el siguiente pedido:\n\n";
+  let msg = "¡Hola! ✨️Tienda Online HN-LINEA PURA✨️ \nMe gustaría realizar el siguiente pedido:\n\n";
   let total = 0;
   cart.forEach((i, idx) => {
     const sub = i.price * i.quantity;
