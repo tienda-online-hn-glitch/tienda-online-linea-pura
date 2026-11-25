@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LÍNEA PURA - Catálogo de Perfumes Exclusivos</title>
-<meta name="description" content="Catálogo oficial de perfumes exclusivos en Honduras. Pide fácil por WhatsApp.">
-<meta property="og:title" content="LÍNEA PURA - Catálogo de Perfumes Exclusivos" />
-<meta property="og:description" content="Catálogo oficial de perfumes exclusivos en Honduras. Pide fácil por WhatsApp." />
+<title>Tienda Online HN - LINEA PURA | Catálogo de Perfumes Exclusivos</title>
+<meta name="description" content="Tienda Online HN - LINEA PURA: catálogo oficial de perfumes exclusivos en Honduras. Pide fácil por WhatsApp.">
+<meta property="og:title" content="Tienda Online HN - LINEA PURA | Catálogo de Perfumes Exclusivos" />
+<meta property="og:description" content="Tienda Online HN - LINEA PURA: catálogo oficial de perfumes exclusivos en Honduras. Pide fácil por WhatsApp." />
 <meta property="og:image" content="https://tienda-online-hn-glitch.github.io/tienda-online-linea-pura/portada.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1024" />
@@ -14,7 +14,24 @@
 <meta property="og:url" content="https://tienda-online-hn-glitch.github.io/tienda-online-linea-pura/" />
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Tienda Online HN - LINEA PURA | Catálogo de Perfumes Exclusivos" />
+<meta name="twitter:description" content="Tienda Online HN - LINEA PURA: catálogo oficial de perfumes exclusivos en Honduras. Pide fácil por WhatsApp." />
 <meta name="twitter:image" content="https://tienda-online-hn-glitch.github.io/tienda-online-linea-pura/portada.png" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Store",
+  "name": "Tienda Online HN - LINEA PURA",
+  "alternateName": "LÍNEA PURA",
+  "description": "Catálogo oficial de perfumes exclusivos en Honduras. Pedidos directos por WhatsApp.",
+  "url": "https://tienda-online-hn-glitch.github.io/tienda-online-linea-pura/",
+  "image": "https://tienda-online-hn-glitch.github.io/tienda-online-linea-pura/portada.png",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "HN"
+  }
+}
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -403,10 +420,10 @@ input:-webkit-autofill:focus {
 <footer class="bg-cardBg border-t border-gold/20 py-8 mt-auto">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
     <div>
-      <h3 class="font-cinzel font-bold text-gold tracking-widest">LÍNEA PURA</h3>
+      <h3 class="font-cinzel font-bold text-gold tracking-widest">Tienda Online HN - LINEA PURA</h3>
       <p class="text-xs text-gray-400 mt-1">Catálogo Exclusivo de Perfumería Fina. Honduras.</p>
     </div>
-    <div class="text-xs text-gray-500">© 2026 Línea Pura. Todos los derechos reservados. Pedidos directos por WhatsApp.</div>
+    <div class="text-xs text-gray-500">© 2026 Tienda Online HN - LINEA PURA. Todos los derechos reservados. Pedidos directos por WhatsApp.</div>
   </div>
 </footer>
 
@@ -647,7 +664,7 @@ function detectBadgeFromText(str) {
 
 function registerKnownBrand(brandName) {
   const cleaned = stripBadgeTag(brandName);
-  if (!cleaned) return 'Línea Pura';
+  if (!cleaned) return 'Tienda Online HN - LINEA PURA';
   const key = normalizeFilterText(cleaned);
   if (!key || key === 'todos') return cleaned;
   if (!knownBrands.has(key)) {
@@ -695,7 +712,7 @@ function mapRawPerfumes(rows) {
     }
 
     const rawName = item.name || 'Sin nombre';
-    const rawBrand = item.brand || 'Línea Pura';
+    const rawBrand = item.brand || 'Tienda Online HN - LINEA PURA';
     const cleanName = stripBadgeTag(rawName) || 'Sin nombre';
     const itemBadge = detectBadgeFromText(rawName) || detectBadgeFromText(rawBrand);
     const cleanBrand = registerKnownBrand(rawBrand);
@@ -1141,7 +1158,7 @@ function renderProducts() {
     return `
       <div class="bg-cardBg border border-gold/20 rounded-2xl overflow-hidden shadow-xl hover:border-gold/50 transition duration-300 flex flex-col group relative">
         <div class="absolute top-3 left-3 z-10 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30">
-          <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${p.brand || 'Línea Pura'}</span>
+          <span class="text-[11px] text-gold uppercase tracking-wider font-bold">${p.brand || 'Tienda Online HN - LINEA PURA'}</span>
         </div>
         ${customBadgeHTML}
         ${statusBadge}
@@ -1560,15 +1577,19 @@ function updateCartUI() {
 
 function checkoutWhatsApp() {
   if (cart.length === 0) { showToast('El carrito está vacío', 'error'); return; }
-  let msg = "¡Hola! ✨️ LÍNEA PURA ✨️ \nMe gustaría realizar el siguiente pedido:\n\n";
+  let msg = "¡Hola! ✨️ Tienda Online HN - LINEA PURA ✨️ \nMe gustaría realizar el siguiente pedido:\n\n";
   let total = 0;
   cart.forEach((i, idx) => {
     const sub = i.price * i.quantity;
     total += sub;
-    msg += `${idx + 1}. *${i.brand} - ${i.name}* (${i.volume})\n   Cant: ${i.quantity} x L. ${i.price.toFixed(2)} = L. ${sub.toFixed(2)}\n\n`;
+    msg += `${idx + 1}. *${i.brand} - ${i.name}* (${i.volume})\n   Cant: ${i.quantity} x L. ${itemPriceText(i.price)} = L. ${sub.toFixed(2)}\n\n`;
   });
   msg += `*Total a Pagar: L. ${total.toFixed(2)}*\n\nPor favor confirmarme disponibilidad. ¡Gracias!`;
   window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function itemPriceText(price) {
+  return parseFloat(price || 0).toFixed(2);
 }
 
 function showToast(message, type = 'success') {
